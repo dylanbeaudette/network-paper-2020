@@ -6,7 +6,7 @@ library(RColorBrewer)
 library(sharpshootR)
 
 # load cached data
-load('component-data.rda')
+load('data/component-data.rda')
 
 # convert component data into adjacency matrix, weighted by component percentage
 m <- component.adj.matrix(x, mu='mukey', co='compname', wt='comppct_r', method = 'community.matrix')
@@ -80,5 +80,5 @@ dev.off()
 
 
 # save
-save(m, g, d, leg, file='cached-graph.rda')
+save(m, g, d, leg, file='data/graph-and-pals.rda')
 

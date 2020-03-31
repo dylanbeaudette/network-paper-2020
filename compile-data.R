@@ -49,8 +49,12 @@ head(x)
 # ~ 7 minutes on home network connection
 mu <- fetchSDA_spatial(x=unique(x$mukey), by.col='mukey', add.fields='mapunit.muname', chunk.size = 2)
 
+
+## convert to locally-appropriate projected CRS
+mu <- spTransform(mu, CRS('+proj=utm +zone=10 +datum=NAD83'))
+
 # save for later
 # two files, in case we need to re-make one or the other
-save(x, file='component-data.rda')
-save(mu, file='spatial-data.rda')
+save(x, file='data/component-data.rda')
+save(mu, file='data/spatial-data.rda')
 
