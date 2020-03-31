@@ -111,6 +111,9 @@ all(as.character(e$layer) == as.character(e$check))
 
 ## colors suck: pick a new palette, setup so that clusters are arranged via similarity
 
+# more contrast at least, terrible colors, but it is 0100h
+levelplot(r, col.regions=c(viridis::viridis(8), viridis::magma(7+2)[-c(1:2)]), xlab="", ylab="", att='legend', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
+
 # simple plot in R, colors hard to see
 png(file='graph-communities-mu-data.png', width=1600, height=1200, type='cairo', antialias = 'subpixel')
 levelplot(r, col.regions=levels(r)[[1]]$color, xlab="", ylab="", att='legend', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
