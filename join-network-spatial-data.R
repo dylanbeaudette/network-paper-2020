@@ -109,6 +109,7 @@ all(as.character(e$layer) == as.character(e$check))
 
 
 
+## colors suck: pick a new palette, setup so that clusters are arranged via similarity
 
 # simple plot in R, colors hard to see
 png(file='graph-communities-mu-data.png', width=1600, height=1200, type='cairo', antialias = 'subpixel')
