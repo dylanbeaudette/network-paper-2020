@@ -22,7 +22,7 @@ Network science offers the opportunity of new insights from looking at existing 
    
    * [Phillips, J. D. (2016) Landforms as extended composite phenotypes. Earth Surf. Process. Landforms, 41: 16–26. doi: 10.1002/esp.3764](http://onlinelibrary.wiley.com/doi/10.1002/esp.3764/abstract)
    
-   * others?
+   * [Phillips J.D. et al. (2015) Graph theory in the geosciences.](http://app.mtu.edu.ng/cbas/Geoscience/Graph%20theory%20in%20the%20geosciences.pdf)
 
 
 ### Notes
