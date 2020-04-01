@@ -6,7 +6,7 @@ library(RColorBrewer)
 library(sharpshootR)
 
 # load cached data
-load('data/component-data.rda')
+x <- readRDS('data/component-data.rda')
 
 # convert component data into adjacency matrix, weighted by component percentage
 m <- component.adj.matrix(x, mu='mukey', co='compname', wt='comppct_r', method = 'community.matrix')
@@ -55,7 +55,7 @@ if(remakeInterp) {
 
 
 # load expert interp and add to graph attributes
-d.interp <- read.csv(file='expert-interp.csv', stringsAsFactors = FALSE)
+d.interp <- read.csv(file = 'expert-interp.csv', stringsAsFactors = FALSE)
 V(g)$notes <- d.interp$notes[match(V(g)$cluster, d.interp$cluster)]
 
 # extract vertex attributes for interpretation and linking to MU data
