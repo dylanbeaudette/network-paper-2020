@@ -15,10 +15,12 @@ library(rasterVis)
 
 
 # load relevant data
-load('data/component-data.rda')
-load('data/spatial-data.rda')
-load('data/cached-graph.rda')
-
+# load('data/component-data.rda')
+x <- readRDS('data/component-data.rda')
+# load('data/spatial-data.rda')
+mu <- readRDS('data/spatial-data.rda')
+# load('data/cached-graph.rda')
+g <- readRDS('data/graph.rda')
 
 ## associate nodes with map units, two options:
 ## simple majority:
