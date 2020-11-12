@@ -5,6 +5,7 @@
 library(igraph)
 library(RColorBrewer)
 library(sharpshootR)
+library(aqp)
 
 library(rgdal)
 library(rgeos)
@@ -31,15 +32,15 @@ clust.list <- split(d, d$cluster)
 ## simple majority: take the component with largest component percentage
 ## membership by component percent: search for each component within an MU within clusters
 
-# simple method: reduce musym--compname to 1:1 via majority rule
-# assumption: there are never >1 components with the same name
-# caveat: some map unit symbols will have NO association with graph, based on previous sub-setting rules: NULL delineations on map
-mu.agg.majority <- function(i) {
-  # keep the largest component
-  idx <- order(i$comppct_r, decreasing = TRUE)
-  res <- i[idx, ][1, , drop=FALSE]
-  return(res)
-}
+# # simple method: reduce musym--compname to 1:1 via majority rule
+# # assumption: there are never >1 components with the same name
+# # caveat: some map unit symbols will have NO association with graph, based on previous sub-setting rules: NULL delineations on map
+# mu.agg.majority <- function(i) {
+#   # keep the largest component
+#   idx <- order(i$comppct_r, decreasing = TRUE)
+#   res <- i[idx, ][1, , drop=FALSE]
+#   return(res)
+# }
 
 # more interesting, likely more accurate method:
 # compute cluster membership by map unit
@@ -67,11 +68,14 @@ mu.agg.membership <- function(i) {
   rs <- rowSums(mat)
   # highest membership cluster index
   idx <- which.max(rs)
+  # Shannon entropy from proportions [sum(component pct) / 100]
+  H <- shannonEntropy(rs/100)
   
   res <- data.frame(
     mukey = i$mukey[1],
     cluster = idx,
     membership = rs[idx],
+    H = H,
     stringsAsFactors = FALSE
     )
   
@@ -79,7 +83,7 @@ mu.agg.membership <- function(i) {
 }
 
 # create mu -> graph lookup table
-mu.LUT <-lapply(split(x, x$mukey), mu.agg.membership)
+mu.LUT <- lapply(split(x, x$mukey), mu.agg.membership)
 mu.LUT <- do.call('rbind', mu.LUT)
 
 
