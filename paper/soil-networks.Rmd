@@ -104,59 +104,60 @@ d <- readRDS('../data/vertices_df.rda')
 ```
 
 ```{r preprocessing, echo=FALSE, cache=TRUE}
-## associate nodes with map units, two options:
-## simple majority:
-## membership by component percent:
-
-# simple method: reduce mukey--compname to 1:1 via majority rule
-# assumption: there are never >1 components with the same name
-# caveat: some map unit symbols will have NO association with graph, based on previous subsetting rules: NULL delineations on map
-mu.agg.majority <- function(i) {
-  # keep the largest component
-  idx <- order(i$comppct_r, decreasing = TRUE)
-  res <- i[idx, ][1, , drop=FALSE]
-  return(res)
-}
-
-# create mu -> graph lookup table
-# mu.LUT <- plyr::ddply(x, 'musym', mu.agg.majority)
-mu.LUT <- plyr::ddply(x, 'mukey', mu.agg.majority)
-
-# compnames in graph but not mu.LUT
-# setdiff(V(g)$name, unique(mu.LUT$compname))
+# ## associate nodes with map units, two options:
+# ## simple majority:
+# ## membership by component percent:
 # 
-# in mu.LUT but not in graph
-# setdiff(unique(mu.LUT$compname), V(g)$name)
+# # simple method: reduce mukey--compname to 1:1 via majority rule
+# # assumption: there are never >1 components with the same name
+# # caveat: some map unit symbols will have NO association with graph, based on previous subsetting rules: NULL delineations on map
+# mu.agg.majority <- function(i) {
+#   # keep the largest component
+#   idx <- order(i$comppct_r, decreasing = TRUE)
+#   res <- i[idx, ][1, , drop=FALSE]
+#   return(res)
+# }
+# 
+# # create mu -> graph lookup table
+# # mu.LUT <- plyr::ddply(x, 'musym', mu.agg.majority)
+# mu.LUT <- plyr::ddply(x, 'mukey', mu.agg.majority)
+# 
+# # compnames in graph but not mu.LUT
+# # setdiff(V(g)$name, unique(mu.LUT$compname))
+# # 
+# # in mu.LUT but not in graph
+# # setdiff(unique(mu.LUT$compname), V(g)$name)
+# 
+# # join mukey -- graph via component name
+# d <- plyr::join(mu.LUT, d, by='compname')
+# 
+# # join() / merge() do strange things in the presence of NA...
+# d.no.na <- d[which(!is.na(d$mukey)), ]
+# 
+# # samity-check: mukey in map missing from graph--mukey association
+# # none missing: good
+# if ( length(setdiff(unique(x$mukey), d.no.na$mukey)) > 0 ) stop()
+# 
+# # sanity check: there should be a 1:1 relationship between
+# # OK
+# if (! (all(rowSums(as.matrix(table(d$mukey, d$cluster))) < 2)) ) stop()
+# 
+# ## note: there are a couple clusters without corresponding polygons!
+# # this breaks in the presence of NA...
+# mu <- merge(mu, d.no.na, by.x='mukey', by.y='mukey')
+# 
+# # filter-out polygons with no assigned cluster
+# mu <- mu[which(!is.na(mu$cluster)), ]
+# 
+# # TODO: investigate map units (mukey) that aren't represented in the graph
+# # x[which(x$mukey %in% unique(mu[which(is.na(mu$cluster)), ]$mukey)), ]
+# 
+# # aggregate geometry based on cluster labels
+# mu.simple <- rgeos::gUnionCascaded(mu, as.character(mu$cluster))
+# mu.simple.spdf <- sp::SpatialPolygonsDataFrame(mu.simple, data=data.frame(ID=sapply(slot(mu.simple, 'polygons'), slot, 'ID')), match.ID = FALSE)
 
-# join mukey -- graph via component name
-d <- plyr::join(mu.LUT, d, by='compname')
-
-# join() / merge() do strange things in the presence of NA...
-d.no.na <- d[which(!is.na(d$mukey)), ]
-
-# samity-check: mukey in map missing from graph--mukey association
-# none missing: good
-if ( length(setdiff(unique(x$mukey), d.no.na$mukey)) > 0 ) stop()
-
-# sanity check: there should be a 1:1 relationship between
-# OK
-if (! (all(rowSums(as.matrix(table(d$mukey, d$cluster))) < 2)) ) stop()
-
-## note: there are a couple clusters without corresponding polygons!
-# this breaks in the presence of NA...
-mu <- merge(mu, d.no.na, by.x='mukey', by.y='mukey')
-
-# filter-out polygons with no assigned cluster
-mu <- mu[which(!is.na(mu$cluster)), ]
-
-# TODO: investigate map units (mukey) that aren't represented in the graph
-# x[which(x$mukey %in% unique(mu[which(is.na(mu$cluster)), ]$mukey)), ]
-
-# aggregate geometry based on cluster labels
-mu.simple <- rgeos::gUnionCascaded(mu, as.character(mu$cluster))
-mu.simple.spdf <- sp::SpatialPolygonsDataFrame(mu.simple, data=data.frame(ID=sapply(slot(mu.simple, 'polygons'), slot, 'ID')), match.ID = FALSE)
-
-saveRDS(mu, '../outputs/mu_ca.rda')
+mu_sf <- st_read('../data/graph-and-mu-polygons.shp')
+# saveRDS(mu, '../outputs/mu_ca.rda')
 ```
 
 ```{r expert_interpretation, echo=FALSE, cache=TRUE, message=FALSE}
@@ -167,36 +168,37 @@ expert <- readr::read_csv('../expert-interp.csv') %>%
 V(g)$notes <- expert$notes[V(g)$cluster]
 
 # Upload expert notes to polygons
-mu_sf <- st_as_sf(mu)
-mu_sf$notes <- NULL
-mu_sf <-mu_sf %>% 
-  mutate(cluster = as.character(cluster)) %>% 
+#mu_sf <- st_as_sf(mu)
+# mu_sf$notes <- NULL
+mu_sf <- mu_sf %>% 
+  dplyr::mutate(cluster = as.character(ID)) %>% 
   dplyr::left_join(expert, by = "cluster")
 
-# Union based on cluster ID
-mu_union <- mu_sf %>%
-  dplyr::mutate(cl = as.character(cluster)) %>% 
-  dplyr::group_by(cl) %>% 
-  dplyr::summarise(color = unique(color), notes = unique(notes))
+# # Union based on cluster ID
+# mu_union <- mu_sf %>%
+#   dplyr::mutate(cl = as.character(cluster)) %>% 
+#   dplyr::group_by(cl) %>% 
+#   dplyr::summarise(color = unique(color), notes = unique(notes))
 
-saveRDS(mu_union, '../outputs/mu_union_ca.rda')
+# saveRDS(mu_union, '../outputs/mu_union_ca.rda')
 ```
 
 ```{r abundance, cache=TRUE}
 # abundance <- dplyr::left_join(select(mu_sf, muiid), x) %>% 
-abundance <- dplyr::left_join(select(mu_sf, gid, mukey), x) %>%
-  st_as_sf %>% 
-  mutate(
-    area = st_area(.),
+abundance <- mu %>% #dplyr::left_join(select(mu_sf, gid, mukey), x) %>%
+  st_as_sf() %>% 
+  dplyr::select(gid, mukey) %>% 
+  dplyr::left_join(x) %>% 
+  dplyr::mutate(
+    area = sf::st_area(.),
     area_w = area * comppct_r / 100 # Weigthed area
   ) %>% 
-  # st_set_geometry(NULL) %>% 
-  group_by(compname) %>% 
-  summarise(
-    abundance = sum(area_w),
-    abundance_ha = units::set_units(measurements::conv_unit(abundance, from = "m2", "hectare"), "ha"),
-    do_union = FALSE
-  )
+  st_set_geometry(NULL) %>%
+  dplyr::mutate(area_dbl = as.numeric(area_w)) %>% 
+  dplyr::group_by(compname) %>% 
+  dplyr::summarise(area = sum(area_dbl)) %>% 
+  dplyr::mutate(abundance_ha = units::set_units(measurements::conv_unit(area, from = "m2", "hectare"), "ha")) #%>% 
+  # dplyr::summarise(tot_area_ha = sum(abundance_ha))
 ```
 
 ## Study site
@@ -571,6 +573,19 @@ p_comp_per_pols <- x %>%
 
 print(p_comp_per_pols)
 ```
+## Abundance
+
+```{r fig_abundance, echo=FALSE, fig.cap="\\label{fig:abundance}Relative abundance of the different soil components found in the surveyed region."}
+p_ab <- abundance %>% 
+  # dplyr::filter(as.numeric(abundance_ha) > 5) %>% 
+  ggplot() +
+  geom_bar(aes(y = as.numeric(abundance_ha), x = reorder(compname, -abundance_ha)), stat = "identity") +
+  labs(y = "Area (ha)", x = "Soil series") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(p_ab)
+```
 
 ## Adjacency graph 
 
@@ -607,12 +622,12 @@ k$nodes <- data.frame(k$nodes, vertex_df)
 k$links <- data.frame(k$links, weight = E(g)$weight)
 
 colour_scale_data <- k$nodes %>% 
-  group_by(group) %>% 
+  dplyr::group_by(group) %>% 
   dplyr::summarise(
     color = unique(color),
     notes = unique(notes)
   ) %>% 
-  mutate(
+  dplyr::mutate(
     cl = as.character(group), 
     color_simple = stringr::str_sub(color, start = 1, end = 7)
   )
@@ -712,7 +727,14 @@ print(p_g4)
 
 
 ```{r map_communities_interp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_communities_interp}Map of the communities identifies on the graph, along with their expert interpretation. The colours used for the detected communities are the same as the one used Figure \\ref{plot_graph_4}.", fig.width=10, fig.height=8}
-pn <- mu_union %>% #mutate(id = as.numeric(cl)) %>% arrange(id) %>% 
+mu_notes <- mu_sf %>% 
+  dplyr::select(-ID, -notes) %>% # remove redundant columns
+  dplyr::left_join(
+    dplyr::mutate(colour_scale_data, cluster = as.character(group)), 
+    by = "cluster"
+  )
+
+pn <- mu_notes %>% #mutate(id = as.numeric(cl)) %>% arrange(id) %>% 
   ggplot() + 
   geom_sf(aes(fill = notes), colour = "grey70", lwd = 0.05) + 
   scale_fill_manual(values = colour_scale_data$color_simple, guide = guide_legend(title = "")) +
