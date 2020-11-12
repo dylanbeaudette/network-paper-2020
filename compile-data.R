@@ -55,6 +55,6 @@ mu <- spTransform(mu, CRS('+proj=utm +zone=10 +datum=NAD83'))
 
 # save for later
 # two files, in case we need to re-make one or the other
-saveRDS(x, file='data/component-data.rda')
-saveRDS(mu, file='data/spatial-data.rda')
+saveRDS(x, file='./data/component-data.rda')
+saveRDS(mu, file='./data/spatial-data.rda')
 
