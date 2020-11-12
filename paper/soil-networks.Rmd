@@ -1,0 +1,741 @@
+---
+title: Using co-occurence networks to map soilscapes
+author:
+  - name: Dylan Beaudette
+    email: debeaudette@ucdavis.edu
+    affiliation: NRCS
+  - name: Pierre Roudier
+    email: roudierp@landcareresearch.co.nz
+    affiliation: MW,TPM
+    footnote: Corresponding Author
+  - name: Dion O'Neale
+    affiliation: TPM
+address:
+  - code: NRCS
+    address: USDA -- NRCS, Sonora, CA, USA
+  - code: MW
+    address: Manaaki Whenua -- Landcare Research, Palmerston North, New Zealand
+  - code: TPM
+    address: Te Pūnaha Matatini, A New Zealand Centre of Research Excellence, Private Bag 92019, Auckland 1142, New Zealand
+
+abstract: |
+  Soils are arguably one of the most complex materials on Earth, and present a unique challenge for those seeking to constrain spatial variability within the context of soil survey. Across the landscape, different soil types will often be spatially intermingled. This is reflected by soil mapping units that are often composed of more than one soil taxa. The research field of network science offers new mathematical tools to visualize and analyze existing soil survey data, and explore its complex relational interactions. In this paper, we extract and visualize pedological information by analyzing the co-occurrence of soil taxa using a network approach. For any level of a given hierarchical soil classification system, the co-occurrence of soil taxa within and between neighboring soil mapping units can be described as a network graph. The structural properties of the resulting graphs can be analyzed, and tools such as community structure detection are used to classify their different nodes. Soilscapes are then delineated by mapping the identified communities back in geographical space. This approach also gives a method for quantifying the pedological complexity of different regions based on their constituent soil types, using metrics such as graph connectivity. Different levels of granularity for both the regional data and the soil classification data allow for views at different scales. Network science offers the opportunity of new insights from looking at existing data in a new way. Soil survey data from USDA-NRCS (USA) is used to illustrate the value and originality of these new approaches.
+  
+bibliography: references.bib
+output:
+  base_format: rticles::elsevier_article
+  citation_package: natbib
+  fig_caption: yes
+  
+---
+
+Introduction
+============
+
+Soil survey traditionally represents soils in the landscapes as a set of polygons, thate are populated with one or more soil concepts. 
+
+Despite the rise of predictive techniques as a way to produce new soil information, a considerable amount of knowledge resides in legacy soil surveys. 
+
+- 1977, 1985: F.D. Hole, soilscapes defines patterns of association
+- 2001: P. Lagacherie et al., soilscapes as landscape signature
+- 2010: A.E. Hewitt et al., soilscapes as modeling domains 
+- 2013/2016: J.D. Phillips, spatial adjacency of mapping units
+- 2013--current: SoilWeb Series Data Explorer
+- Review paper -- Graph theory in the geosciences http://app.mtu.edu.ng/cbas/Geoscience/Graph%20theory%20in%20the%20geosciences.pdf
+
+Application of networks in soil science/geomorphology: @heckmann2015graph, @phillips2015graph, @phillips2016identifying
+
+This paper focusing in quantifying and mapping co-occurrence from tabular data (ie excluding spatial adjacency). To make the introduction of those new methods easier, it is ignoring the spatial adjacency. 
+
+
+Material and Methods
+====================
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(
+  dev = "png",
+  dpi = 200,
+  echo=FALSE, 
+  message=FALSE, 
+  warning=FALSE
+  )
+options(scipen = 999)
+```
+
+```{r libs, echo=FALSE, message=FALSE}
+# Utils
+library(dplyr)
+
+# Spatial 
+library(sf)
+library(rgdal)
+library(sp)
+
+# Graphs
+library(igraph)
+library(networkD3)
+
+# Soil
+library(sharpshootR)
+
+# Datavis
+library(RColorBrewer)
+library(ggplot2)
+library(ggsn)
+library(ggraph)
+library(ggmap)
+library(ggforce)
+library(hrbrthemes)
+library(patchwork)
+# library(cowplot)
+```
+
+```{r data, echo=FALSE}
+# load cached data
+
+#load('../data/cached-nasis.rda')
+# load('../data/cached-mu.rda')
+# load('../data/cached-graph.rda')
+
+x <- readRDS('../data/component-data.rda')
+mu <- readRDS('../data/spatial-data.rda')
+g <- readRDS('../data/graph.rda')
+d <- readRDS('../data/vertices_df.rda')
+```
+
+```{r preprocessing, echo=FALSE, cache=TRUE}
+## associate nodes with map units, two options:
+## simple majority:
+## membership by component percent:
+
+# simple method: reduce mukey--compname to 1:1 via majority rule
+# assumption: there are never >1 components with the same name
+# caveat: some map unit symbols will have NO association with graph, based on previous subsetting rules: NULL delineations on map
+mu.agg.majority <- function(i) {
+  # keep the largest component
+  idx <- order(i$comppct_r, decreasing = TRUE)
+  res <- i[idx, ][1, , drop=FALSE]
+  return(res)
+}
+
+# create mu -> graph lookup table
+# mu.LUT <- plyr::ddply(x, 'musym', mu.agg.majority)
+mu.LUT <- plyr::ddply(x, 'mukey', mu.agg.majority)
+
+# compnames in graph but not mu.LUT
+# setdiff(V(g)$name, unique(mu.LUT$compname))
+# 
+# in mu.LUT but not in graph
+# setdiff(unique(mu.LUT$compname), V(g)$name)
+
+# join mukey -- graph via component name
+d <- plyr::join(mu.LUT, d, by='compname')
+
+# join() / merge() do strange things in the presence of NA...
+d.no.na <- d[which(!is.na(d$mukey)), ]
+
+# samity-check: mukey in map missing from graph--mukey association
+# none missing: good
+if ( length(setdiff(unique(x$mukey), d.no.na$mukey)) > 0 ) stop()
+
+# sanity check: there should be a 1:1 relationship between
+# OK
+if (! (all(rowSums(as.matrix(table(d$mukey, d$cluster))) < 2)) ) stop()
+
+## note: there are a couple clusters without corresponding polygons!
+# this breaks in the presence of NA...
+mu <- merge(mu, d.no.na, by.x='mukey', by.y='mukey')
+
+# filter-out polygons with no assigned cluster
+mu <- mu[which(!is.na(mu$cluster)), ]
+
+# TODO: investigate map units (mukey) that aren't represented in the graph
+# x[which(x$mukey %in% unique(mu[which(is.na(mu$cluster)), ]$mukey)), ]
+
+# aggregate geometry based on cluster labels
+mu.simple <- rgeos::gUnionCascaded(mu, as.character(mu$cluster))
+mu.simple.spdf <- sp::SpatialPolygonsDataFrame(mu.simple, data=data.frame(ID=sapply(slot(mu.simple, 'polygons'), slot, 'ID')), match.ID = FALSE)
+
+saveRDS(mu, '../outputs/mu_ca.rda')
+```
+
+```{r expert_interpretation, echo=FALSE, cache=TRUE, message=FALSE}
+expert <- readr::read_csv('../expert-interp.csv') %>% 
+  dplyr::mutate(cluster = as.character(cluster))
+
+# Upload expert notes to graph nodes
+V(g)$notes <- expert$notes[V(g)$cluster]
+
+# Upload expert notes to polygons
+mu_sf <- st_as_sf(mu)
+mu_sf$notes <- NULL
+mu_sf <-mu_sf %>% 
+  mutate(cluster = as.character(cluster)) %>% 
+  dplyr::left_join(expert, by = "cluster")
+
+# Union based on cluster ID
+mu_union <- mu_sf %>%
+  dplyr::mutate(cl = as.character(cluster)) %>% 
+  dplyr::group_by(cl) %>% 
+  dplyr::summarise(color = unique(color), notes = unique(notes))
+
+saveRDS(mu_union, '../outputs/mu_union_ca.rda')
+```
+
+```{r abundance, cache=TRUE}
+# abundance <- dplyr::left_join(select(mu_sf, muiid), x) %>% 
+abundance <- dplyr::left_join(select(mu_sf, gid, mukey), x) %>%
+  st_as_sf %>% 
+  mutate(
+    area = st_area(.),
+    area_w = area * comppct_r / 100 # Weigthed area
+  ) %>% 
+  # st_set_geometry(NULL) %>% 
+  group_by(compname) %>% 
+  summarise(
+    abundance = sum(area_w),
+    abundance_ha = units::set_units(measurements::conv_unit(abundance, from = "m2", "hectare"), "ha"),
+    do_union = FALSE
+  )
+```
+
+## Study site
+
+```{r map_context, echo=FALSE, cache=TRUE}
+roi <- mu %>% 
+  st_as_sf %>% 
+  st_union %>% 
+  st_buffer(dist = 5000) %>% 
+  st_buffer(dist = -5000)
+
+state <- ggplot2::map_data('state')
+
+roi_wgs <- roi %>% 
+  st_transform(crs = 4326) %>% 
+  as("Spatial") %>% 
+  fortify
+
+# us_states <- st_transform(sf::st_as_sf(maps::map('state', plot = FALSE, fill = TRUE)), crs = 102003)
+us_states <- st_transform(sf::st_as_sf(maps::map('state', plot = FALSE, fill = TRUE)), crs = 2163)
+  
+m_context <- ggplot() + 
+  geom_sf(data = us_states, fill = "grey80") + 
+  geom_sf(data = dplyr::filter(st_transform(sf::st_as_sf(maps::map('state', plot = FALSE, fill = TRUE)), crs = 2163), ID == "california"), fill = "grey50") +
+  geom_sf(data = roi, fill = "red") +
+  ggsn::north(data = us_states, location = "bottomright") +
+  ggsn::scalebar(data = us_states, transform = FALSE, dist = 500, dist_unit = "km", location = "bottomleft", st.size = 3) +
+  labs(x = "", y = "") +
+  theme_bw()
+
+m_context_zoom <- ggplot() + 
+  geom_sf(data = dplyr::filter(us_states, ID == "california"), fill = "grey50") +
+  geom_sf(data = roi, fill = "red") +
+  ggsn::north(data = dplyr::filter(us_states, ID == "california")) +
+  ggsn::scalebar(data = dplyr::filter(us_states, ID == "california"), transform = FALSE, dist = 200, dist_unit = "km", location = "bottomleft", st.size = 3) +
+  labs(x = "", y = "") +
+  theme_bw()
+
+# m_context <- ggplot() + 
+#   geom_polygon(data = state, aes(x = long, y = lat, group = group), fill = "grey80", size = 0.2, colour = "grey90") +
+#   geom_polygon(data = dplyr::filter(state, region == "california"), aes(x = long, y = lat, group = group), fill = "grey70", colour = "grey90") +
+#   geom_polygon(data = roi_wgs, aes(x = long, y = lat, group = group), fill = "red") + 
+#   ggforce::facet_zoom(xy = region == "california", zoom.size = 0.8) + 
+#   coord_map("albers", lat0 = 39, lat1 = 45) + 
+#   theme_bw() + 
+#   labs(x = "", y = "")
+
+#print(m_context + m_context_zoom)
+```
+
+This study focused on a `r prettyNum(units::drop_units(round(measurements::conv_unit(sf::st_area(roi), "m2", "hectare"))), big.mark = ",")` ha area located in the foothills of the Sierra Nevada in California, USA (Figure \ref{fig:map_survey}). 
+The mean annual rainfall/altitude/etc... 
+
+## Conventional soil survey
+
+The soils of the study site were surveyed conventionally by the NRCS...
+
+The result of this survey is a map of `r prettyNum(nrow(mu), big.mark = ",")` polygons over the region (Figure \ref{fig:map_survey}).
+
+Probably explain the concept of MU here too.
+
+```{r map_survey, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_survey}Context of the study, showing the outlines of the mapping units present in the soil survey. The study site is located on the foothills of the Sierra Nevada in California, USA.", cache=TRUE}
+m_survey <- ggplot(st_as_sf(mu)) +
+  geom_sf(lwd = 0.2) +
+  ggsn::north(data = st_as_sf(mu)) +
+  ggsn::scalebar(data = st_as_sf(mu)[, 'geometry'], transform = FALSE, dist = 10, dist_unit = "km", location = "bottomleft", st.size = 3) +
+  labs(x = "", y = "") +
+  theme_bw()
+
+(m_context / m_context_zoom) | m_survey
+```
+
+\begin{table}
+\centering
+\begin{tabular}{ccc}
+\hline
+mu & component & pct \\
+\hline
+1612048 & Amador & 45 \\
+1612048 & Gillender & 40 \\
+1612048 & Ranchoseco & 6 \\
+1612048 & Vleck & 3 \\
+1612048 & Pardee & 3 \\
+1612048 & Peters & 3 \\
+... & ... & ... \\
+2766838 & Amador & 76 \\
+2766838 & Gillender & 9 \\
+2766838 & Pardee & 5 \\
+2766838 & Miltonhills & 5 \\
+2766838 & Redding & 3 \\
+\hline
+\end{tabular}
+\caption{Example of tabular soil survey data. mu: map unit code. component: name of the soil serie identified in the map unit. pct: relative percentage of the soil serie within that map unit, as estimated by the pedologist. Source: XXXX.}
+\label{tab:sim_mat_1}
+\end{table}
+
+
+## Creating graphs from soil survey data
+
+<!-- The results of the soil survey were analysed using tools from the network science field.  -->
+<!-- All data analysis was done in R [REFERENCE]. -->
+In this study, we analysed the soil map produced by conventional mapping using tools from the field of network science [REFERENCE]. 
+Namely, these tools were used to analyse the co-occurence of different soil series over the survey area. 
+
+### Soil siblings
+
+The original, tabular soil survey data was organised so that one or more soil series were associated within each map unit delineated over the survey area.   
+Additionally, the relative proportion of each soil serie within each map unit was estimated by the pedologist who surveyed the area (Table \ref{tab:sim_mat_1}).
+
+In this study, we refer to "soil siblings" as the set of soil series that co-occur in at least one map unit. 
+On the subset of soil survey data provided Table \ref{tab:sim_mat_1}, soil series \textit{Amador}, \textit{Gillender}, \textit{Ranchoseco}, \textit{Vleck}, \textit{Pardee}, and \textit{Peters} are all siblings, since they co-occur in map unit "1612048". 
+However, \textit{Vleck} and \textit{Miltonhills} are not siblings, at least on that subset of data, since they do not co-occur in any of the two map units presented in this Table. 
+It is important to note that there is not necessarily any taxonomical links between siblings --- the only condition for two soil series to be "siblings" is that they need to be mapped within same map units at least once. 
+
+### Quantifying soil series associations
+
+An intuitive way to detect soil siblings, and therefore represent the co-occurrence between the different soil series present in the surveyed region, is to compute a co-occurrence matrix [@legendre2012numerical]. 
+A co-occurrence matrix tabulates the number of times each possible combination of two soil series co-occur in map units of the surveyed area (Table \ref{tab:sim_mat_2}). 
+
+\begin{table}
+\centering
+\begin{tabular}{cccccccc}
+\hline
+ & Gillender & Miltonhills & Pardee & Peters & Ranchoseco & Redding & Vleck \\
+\hline
+Amador & 2 & 1 & 2 & 1 & 1 & 1 & 1 \\
+Gillender & 0 & 1 & 2 & 1 & 1 & 1 & 1\\
+Miltonhills & 0 & 0 & 1 & 0 & 0 & 1 & 0\\
+Pardee & 0 & 0 & 0 & 1 & 1 & 1 & 1 \\
+Peters & 0 & 0 & 0 & 0 & 1 & 0 & 1 \\
+Ranchoseco & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\
+Redding & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ \\
+Vleck & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ \\
+\hline
+\end{tabular}
+\caption{Co-occurence matrix derived from the subset of soil suvey data presented in Table \ref{tab:sim_mat_1}}
+\label{tab:sim_mat_2}
+\end{table}
+
+Unfortunately, using this method, the information about the relative likelihood to find a soil series in a given map unit  (typically represented by the pedologist for each map unit as a relative percentage for each soil sibling) is lost in the process. 
+A workaround this issue is to calculate a similarity matrix, rather than the co-occurrence matrix, between the different soil siblings. 
+To do so, the map unit data from the soil survey (similar to the example showed Table \ref{tab:sim_mat_1}) was reshaped into a pseudo-community matrix (Table \ref{tab:sim_mat_3}), which uses the relative percentage of soil siblings to weight the presence of these siblings across map units. 
+The resulting pseudo-community matrix was then standardised relative to the maximum relative presence for each soil sibling. 
+The standardised matrix is then used to compute a distance matrix, based on the Jaccard distance [@legendre2012numerical]: 
+
+\begin{equation}
+2 \times B / (1 + B)
+\label{eq:jaccard}
+\end{equation}
+where B is Bray-Curtis dissimilarity, defined as:
+\begin{equation}
+D(j,k) = \frac{\sum abs(X(i,j) - X(i, k))}{\sum (X(i, j) + X(i, k))}
+\label{eq:bray}
+\end{equation}
+where X(i, j) and X(i, k) are the standardised quantity of soil siblings i and map units j and k. 
+Finally, the similarity matrix (Table \ref{tab:sim_mat_4}) is obtained by [@kaufman2009finding]:
+
+\begin{equation}
+S = max(D) - D
+\label{eq:similarity}
+\end{equation}
+where D is the distance matrix obtained via Equation \ref{eq:jaccard}, and S is the resulting similarity matrix.
+
+\begin{table}
+\begin{tabular}{ccccccccc}
+\hline
+ & 461845 & 461980 & 462528 & 462529 & 462530 & 462531 & 462954 & 462955 \\
+\hline
+Amador & 45 & 25 & 85 & 85 & 85 & 85 & 85 & 85 \\
+Corning & 0 & 5 & 0 & 0 & 0 & 0 & 0 & 0\\
+Exchequer & 0 & 0 & 5 & 5 & 5 & 5 & 0 & 0\\
+Gillender & 40 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Hornitos & 0 & 0 & 5 & 5 & 5 & 5 & 10 & 10 \\
+Inks & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Miltonhills & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Pardee & 3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Pentz & 0 & 0 & 5 & 5 & 5 & 5 & 5 & 5 \\
+Peters & 3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Ranchoseco & 3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Redding & 0 & 4 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Vleck & 3 & 40 & 0 & 0 & 0 & 0 & 0 & 0\\
+\hline
+\end{tabular}
+\caption{Pseudo-community matrix derived from the soil survey data. Each row represents a soil series, while each column represent a map unit code. The tranformation used the relative percentage of soil siblings to weight the presence of soil siblings across the different map units.}
+\label{tab:sim_mat_3}
+\end{table}
+
+\begin{table}
+\begin{tabular}{cccccccc}
+\hline
+& Gillender & Miltonhills & Pardee & Peters & Ranchoseco & Redding & Vleck \\
+\hline
+Amador & 0.5 & 0.03 & 0.07 & 0.03 & 0.03 & 0.01 & 0.03 \\
+Gillender & 0 & 0.07 & 0.13 & 0.07 & 0.07 & 0.03 & 0.07 \\
+Miltonhills & 0 & 0 & 0.50 & 0 & 0 & 0.40 & 0 \\        
+Pardee & 0 & 0 & 0 & 0.50 & 0.50 & 0.20 & 0.50 \\
+Peters & 0 & 0 & 0 & 0 & 1.00 & 0 & 1.00 \\
+Ranchoseco & 0 & 0 & 0 & 0 & 0 & 0 & 1.00 \\
+Redding & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Vleck & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+\hline
+\end{tabular}
+\caption{Similarity matrix derived from the subset of soil suvey data presented in Table \ref{tab:sim_mat_1}}
+\label{tab:sim_mat_4}
+\end{table}
+
+```{r ex_adj_mat, echo=FALSE, results='asis'}
+# ex_m <- matrix(NA, ncol = 5, nrow = 5)
+# rownames(ex_m) <- colnames(ex_m) <- LETTERS[1:5]
+# ex_m[2, 1] <- 0.58
+# ex_m[3, 1] <- ex_m[3, 2] <- ex_m[4, 3] <- ex_m[5, 1] <- ex_m[5, 2] <- ex_m[5, 4] <- 0.00
+# ex_m[4, 1] <- 0.34
+# ex_m[4, 2] <- 0.12
+# ex_m[5, 3] <- 0.27
+# ex_m[2, 1] <- 0.58
+# ex_m[3, 1] <- ex_m[3, 2] <- ex_m[4, 3] <- ex_m[5, 1] <- ex_m[5, 2] <- ex_m[5, 4] <- 0.00
+# ex_m[4, 1] <- 0.34
+# ex_m[4, 2] <- 0.12
+# ex_m[5, 3] <- 0.27
+
+# ex_m <- matrix(NA, ncol = 8, nrow = 8)
+# colnames(ex_m) <- c('Amador', 'Gillender', 'Miltonhills', 'Pardee', "Peters", 'Ranchoseco', 'Redding', 'Vleck')
+# rownames(ex_m) <- c('Amador', 'Gillender', 'Miltonhills', 'Pardee', "Peters", 'Ranchoseco', 'Redding', 'Vleck')
+# ex_m[1,] <- c(1.00, 0.5, 0.03, 0.07, 0.03, 0.03, 0.01, 0.03)
+# ex_m[2,] <- c(0.5, 1.00, 0.07, 0.13, 0.07, 0.07, 0.03, 0.07)
+# ex_m[3,] <- c(0, 0, 1.00,  0.50, 0, 0, 0.40, 0)
+# ex_m[4,] <- c(0, 0, 0, 1.00, 0.50, 0.50, 0.20, 0.50)
+# ex_m[5,] <- c(0, 0, 0, 0, 1.00, 0, 0, 1.00)
+# ex_m[6,] <- c(0, 0, 0, 0, 0, 1.00, 0, 1.00)
+# ex_m[7,] <- c(0, 0, 0, 0, 0, 0, 1.00, 0)
+# ex_m[8,] <- c(0, 0, 0, 0, 0, 0, 0, 1.00)
+# ex_m[lower.tri(ex_m)] <- ex_m[upper.tri(ex_m)]
+
+data(amador, package = "sharpshootR")
+ex_m <- sharpshootR::component.adj.matrix(amador)
+
+# d <- data.frame(ex_m)
+# diag(d) <- rep('-', times = 5)
+# d[is.na(d)] <- ''
+# 
+# knitr::kable(d, caption = "Example adjacency matrix")
+```
+
+<!-- This method was implemented in the R package `sharpshootR` [REFERENCE]. -->
+
+### Graph representation of the soil series associations
+
+In this study, we used the similarity matrix S calculated from the soil survey data matrix using Equation \ref{eq:similarity} as an adjacency matrix to represent the associations of different soil series within the map units. 
+The matrix S was then used to generate an undirected graph representation of the associations between soil siblings (Figure \ref{fig:ex_graph}). 
+The Fruchterman-Reingold layout [@fruchterman1991graph] was used to project the undirected graph as a data visualisation. 
+It is a force-directed layout algorithm, which tries to project a graph so that edges have similar length and do not cross each other. 
+
+DION?
+
+```{r ex_graph, echo=FALSE, fig.height=8, fig.width=13, fig.cap="\\label{fig:ex_graph}Generation of an undirected graph representation of soils urvey data. (a) Soil series represented as vertices. (b) "}
+ex_g <- graph.adjacency(ex_m, mode = "upper", weighted = TRUE)
+
+# Size (abundance)
+# V(ex_g)$size <- c(6, 4, 3.5, 3, 3, 2, 1, 1)
+# E(ex_g)$weight[is.na(E(ex_g)$weight)] <- 0
+weight <- E(ex_g)$weight
+vertexSize <- degree(ex_g)
+V(ex_g)$size <- sqrt(vertexSize/max(vertexSize)) * 10 * 2
+
+# Colours (community membership)
+g.com <- igraph::cluster_fast_greedy(ex_g)
+g.com.membership <- igraph::membership(g.com)
+cols <- RColorBrewer::brewer.pal(n = length(g.com), name = 'Set3')
+V(ex_g)$color <- cols[g.com.membership]
+
+# plot.igraph(ex_g, edge.width = 10 * E(ex_g)$weight, layout = layout.fruchterman.reingold)
+
+p_ex_graph <- ggraph(ex_g, layout = "igraph", algorithm = "fr", niter = 5000)
+
+p_ex_graph_0 <- p_ex_graph + 
+  geom_node_point(size = 10, fill = "grey70", colour = "grey10", show.legend = FALSE, shape = 21) +
+  geom_node_text(aes(label = name), repel = FALSE) +
+  scale_size(range = c(6, 20)) +
+  # Expand to make room for larger node sizes
+  scale_x_continuous(expand = expand_scale(add = 1)) + 
+  scale_y_continuous(expand = expand_scale(add = 1)) +
+  #lims(x = c(64, 67), y = c(63, 66.5)) +
+  theme_graph()
+
+p_ex_graph_1 <- p_ex_graph + 
+  geom_edge_link(colour = "grey50") +
+  geom_node_point(size = 10, fill = "grey70", colour = "grey10", show.legend = FALSE, shape = 21) +
+  geom_node_text(aes(label = name), repel = FALSE) +
+  scale_size(range = c(6, 20)) +
+  # Expand to make room for larger node sizes
+  scale_x_continuous(expand = expand_scale(add = 1)) + 
+  scale_y_continuous(expand = expand_scale(add = 1)) +
+  #lims(x = c(64, 67), y = c(63, 66.5)) +
+  theme_graph()
+
+p_ex_graph_2 <- p_ex_graph + 
+  geom_edge_link(aes(edge_width = weight), colour = "grey50", show.legend = FALSE) +
+  geom_node_point(aes(size = size), fill = "grey70", colour = "grey10", show.legend = FALSE, shape = 21) +
+  geom_node_text(aes(label = name), repel = FALSE) +
+  scale_size(range = c(6, 20)) +
+  scale_edge_width_continuous(range = c(1, 3)) +
+  # Expand to make room for larger node sizes
+  scale_x_continuous(expand = expand_scale(add = 1)) + 
+  scale_y_continuous(expand = expand_scale(add = 1)) +
+  #lims(x = c(64, 67), y = c(63, 66.5)) +
+  theme_graph()
+
+p_ex_graph_3 <- p_ex_graph + 
+  geom_edge_link(aes(edge_width = weight), colour = "grey50", show.legend = FALSE) +
+  geom_node_point(aes(size = size, fill = color), colour = "grey10", show.legend = FALSE, shape = 21) +
+  # geom_node_text(aes(label = name), colour = "white", size = 4, repel = FALSE) +
+  geom_node_text(aes(label = name), repel = FALSE) +
+  scale_size(range = c(6, 20)) +
+  scale_edge_width_continuous(range = c(1, 3)) +
+  # Expand to make room for larger node sizes
+  scale_x_continuous(expand = expand_scale(add = 1)) + 
+  scale_y_continuous(expand = expand_scale(add = 1)) +
+  #lims(x = c(64, 67), y = c(63, 66.5)) +
+  theme_graph()
+
+# cowplot::plot_grid(
+#   p_ex_graph_0, p_ex_graph_1, p_ex_graph_2, p_ex_graph_3, 
+#   nrow = 2, 
+#   labels = "auto",
+#   align = "h", label_x = 0.5, label_y = 0
+#   )
+library(patchwork)
+p_ex_graph_0 + p_ex_graph_1 + p_ex_graph_2 + p_ex_graph_3 + plot_layout(ncol = 2) 
+```
+
+## Soil survey graph analysis
+
+### Soil series communities identification
+
+A community structure detection method was applied on the undirected graph derived from the soil survey data. 
+We used the fast greedy modularity optimisation algorithm [@clauset2004finding], which... 
+
+### Network metrics
+
+Degree? Betweeness?
+
+## Implementation
+
+The methods described in this paper have been implemented in the R statistical environment [REFERENCE] as part of the `aqp` and `sharpshootR` packages [@beaudette2013algorithms].
+The graph was created in R based on the `graph.adjacency` method available in the `igraph` package [REFERENCE]. `cluster_fast_greedy`
+
+Results
+=======
+
+## Components per map unit
+
+The number of soil series identified by the pedologist as a component is varying over the surveyed area. 
+Figure \ref{fig:components_per_polygon} shows the distribution of the number of soil components in every map unit that have been recorded in the region. 
+Results show that a large majority of map units are mapped using more than one soil component, with the average number of components used being around 3. 
+This shows that most map units record a co-occurence between three or more soil siblings. 
+
+```{r components_per_polygon, echo=FALSE, fig.cap="\\label{fig:components_per_polygon}Number of soil components mapped in the different map units in the surveyed region."}
+# Number of components per polygon
+p_comp_per_pols <- x %>% 
+  # dplyr::group_by(dmudesc) %>%
+  dplyr::group_by(mukey) %>%
+  dplyr::summarise(
+    n_per_mu = n()
+  ) %>%
+  group_by(n_per_mu) %>% 
+  dplyr::summarise(n = n()) %>% 
+  ggplot() + 
+    geom_bar(aes(x = n_per_mu, y = n), stat = "identity") + 
+    labs(x = "Number of components per map unit", y = "Count") +
+    scale_x_continuous(breaks = 1:8) +
+    theme_bw()
+
+print(p_comp_per_pols)
+```
+
+## Adjacency graph 
+
+<!-- ```{r adjacency_mat, echo=FALSE, cache=TRUE, fig.cap="\\label{fig:adjacency_mat}Co-occurence probability matrix"} -->
+<!-- # adjacency matrix -->
+<!-- p_adj_mat <- reshape2::melt(m) %>%  -->
+<!--   ggplot() +  -->
+<!--     geom_tile(aes(x = Var1, y = Var2, fill = value), colour = "grey90", size = 0.05) +  -->
+<!--     theme_bw() +  -->
+<!--     theme(axis.text = element_blank(), axis.ticks = element_blank()) + -->
+<!--     # scale_fill_continuous(low = "white", high = "red", guide = guide_legend(title = "")) +  -->
+<!--     scale_fill_gradientn( -->
+<!--       colours = c("#ffffff", RColorBrewer::brewer.pal(n = 5, name = "Reds")), -->
+<!--       guide = guide_legend(title = "") -->
+<!--     ) + -->
+<!--     labs(x = "", y = "") + -->
+<!--     # ggtitle("Co-occurence probability matrix") + -->
+<!--     coord_equal() -->
+
+<!-- print(p_adj_mat) -->
+<!-- ``` -->
+
+```{r process_graphs, echo=FALSE, message=FALSE, cache=TRUE}
+k <- igraph_to_networkD3(g, group = V(g)$cluster)
+
+vertex_df <- data.frame(
+  name = V(g)$name,
+  color = V(g)$color,
+  size = V(g)$size,
+  notes = V(g)$notes
+)
+
+k$nodes <- data.frame(k$nodes, vertex_df)
+k$links <- data.frame(k$links, weight = E(g)$weight)
+
+colour_scale_data <- k$nodes %>% 
+  group_by(group) %>% 
+  dplyr::summarise(
+    color = unique(color),
+    notes = unique(notes)
+  ) %>% 
+  mutate(
+    cl = as.character(group), 
+    color_simple = stringr::str_sub(color, start = 1, end = 7)
+  )
+```
+
+```{r draw_graphs, echo=FALSE, message=FALSE, cache=TRUE}
+p_g0 <- ggraph(g, layout = "fr", niter = 50000) +
+  geom_edge_link(colour = "grey70") +
+  geom_node_point(alpha = 0.9) +
+  coord_equal() +
+  ggraph::theme_graph(base_family = "sans")
+
+p_g1 <- p_g0 + 
+  geom_node_point(aes(size = size), alpha = 0.9) +
+  scale_size(guide = FALSE)
+
+p_g2 <- p_g1 +
+  geom_node_point(aes(size = size, color = as.factor(cluster)), alpha = 0.9) +
+  scale_colour_manual(values = colour_scale_data$color_simple, guide = FALSE) +
+  scale_size(guide = FALSE)
+
+p_g3 <- p_g2 +
+  geom_node_text(aes(label = name), repel = TRUE) 
+
+p_g4 <- p_g2 +
+  scale_colour_manual(values = colour_scale_data$color_simple, labels = colour_scale_data$notes, guide = guide_legend(title = ""))
+```
+
+The existence of co-occuring soil series across the surveyed region allowed for the computation of a similarity matrix, as presented in the Methods section. 
+This similarity matrix was then used to build the adjacency graph of the soil survey, which is shown Figure \ref{fig:plot_graph_combined}. 
+The resulting visualisation shows a main network, surrounded by 8 other, much smaller networks. 
+This shows that... 
+
+```{r plot_graph_combined, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_combined}Graph representation of the soil series co-occurence. ", fig.width=12, fig.height=8}
+# cowplot::plot_grid(p_g1, p_g2, p_g3, nrow = 1, labels = "auto", align = "h", label_x = 0.5, label_y = 0)
+# library(patchwork)
+p_g1
+```
+
+Figure \ref{fig:plot_graph_annotated} shows the communities idemtified from the graph structure, and how these cluster the different soil series present in the soil survey area.  
+Ultimately, 16 different communities were delineated by the algorithm. 
+
+```{r plot_graph_annotated, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_annotated}Correspondance between identified communities from the graph structure and soil series.", fig.width=12, fig.height=8}
+# cowplot::plot_grid(p_g1, p_g2, p_g3, nrow = 1, labels = "auto", align = "h", label_x = 0.5, label_y = 0)
+p_g3
+```
+
+## Graph metrics
+
+```{r graph_metrics, echo=FALSE, message=FALSE, warning=FALSE}
+# Betweeness
+btw <- igraph::betweenness(g)
+# Degree
+dg <- degree(g)
+```
+
+```{r page_rank, echo=FALSE, message=FALSE, warning=FALSE}
+nt <- V(g)$notes %>% unique
+names(nt) <- nt
+
+dd <- plyr::ldply(
+  nt, 
+  function(i) {
+    res <- page.rank(igraph::induced_subgraph(g, which(V(g)$notes == i)))
+    d <- data.frame(series = names(res$vector), pr = res$vector)
+    d$series  <- with(d, reorder(series, pr)) 
+    d
+  }
+) 
+
+# p_pr <- ggplot(dd) + 
+#   geom_bar(aes(x = series, y = pr), stat = "identity") + 
+#   facet_wrap(~.id, scales = "free") + 
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+# Discussion
+
+## Expert interpretation of the detected communities
+
+```{r plot_graph_4, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_4}Expert interpretation of the communities.", fig.width=10, fig.height=8}
+print(p_g4)
+```
+
+<!-- ```{r map_communities, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_communities}Map of the communities identified on the graph.", fig.width=10, fig.height=8} -->
+<!-- p <- mu_union %>% #left_join(colour_scale_data, by = c()) %>%  -->
+<!--   ggplot() +  -->
+<!--   geom_sf(aes(fill = notes), colour = "grey70", lwd = 0.05) +  -->
+<!--   scale_fill_manual(values = colour_scale_data$color_simple, labels = mu_union$cl, guide = guide_legend(title = "")) + -->
+<!--   # scale_fill_manual(values = mu_union$color, guide = guide_legend(title = "")) +  -->
+<!--   theme_bw() -->
+
+<!-- print(p) -->
+<!-- ``` -->
+
+
+```{r map_communities_interp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_communities_interp}Map of the communities identifies on the graph, along with their expert interpretation. The colours used for the detected communities are the same as the one used Figure \\ref{plot_graph_4}.", fig.width=10, fig.height=8}
+pn <- mu_union %>% #mutate(id = as.numeric(cl)) %>% arrange(id) %>% 
+  ggplot() + 
+  geom_sf(aes(fill = notes), colour = "grey70", lwd = 0.05) + 
+  scale_fill_manual(values = colour_scale_data$color_simple, guide = guide_legend(title = "")) +
+  # scale_fill_manual(values = mu_union$color, guide = guide_legend(title = "")) + 
+  theme_bw()
+
+print(pn)
+```
+
+## Relationship to various soil-forming factors
+
+The objective validation of the soilscapes delineated by community detection of the adjacency graph is a difficult task. 
+In this study we have decided to look at the distribution of a range of soil-forming factors across the different soilscapes.
+
+## Limitations
+
+- we do not deal with spatial co-occurence
+- level of taxonomy this is run can be discussed, but we feel soil serie is a right choice
+- more to it than the map
+
+
+
+# Conclusion
+
+References {#references .unnumbered}
+==========
