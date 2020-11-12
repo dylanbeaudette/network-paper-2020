@@ -10,6 +10,7 @@ library(aqp)
 library(rgdal)
 library(rgeos)
 library(sp)
+library(sf)
 library(raster)
 library(rasterVis)
 
@@ -127,60 +128,63 @@ mu <- mu[idx, ]
 # x[which(x$mukey %in% unique(mu[which(is.na(mu$cluster)), ]$mukey)), ]
 
 # aggregate geometry based on cluster labels
-mu.simple <- gUnionCascaded(mu, as.character(mu$cluster))
-mu.simple.spdf <- SpatialPolygonsDataFrame(
-  mu.simple, 
-  data = data.frame(
-    ID = sapply(slot(mu.simple, 'polygons'), slot, 'ID')
-  ), 
-  match.ID = FALSE
-)
+# mu.simple <- gUnionCascaded(mu, as.character(mu$cluster))
+# mu.simple.spdf <- SpatialPolygonsDataFrame(
+#   mu.simple, 
+#   data = data.frame(
+#     ID = sapply(slot(mu.simple, 'polygons'), slot, 'ID')
+#   ), 
+#   match.ID = FALSE
+# )
 
+mu.simple.spdf <- mu %>% sf::st_as_sf() %>% dplyr::group_by(cluster) %>% dplyr::summarise()
 
-
-## viz using raster methods
-# this assumes projected CRS
-r <- rasterize(mu, raster(extent(mu), resolution = 90), field = 'cluster')
-projection(r) <- proj4string(mu)
-
-## kludge for plotting categories
-# convert to categorical raster
-r <- as.factor(r)
-rat <- levels(r)[[1]]
-
-# use previously computed legend of unique cluster IDs and colors
-# note that the raster legend is missing 3 clusters
-rat$color <- leg$color[match(rat$ID, leg$cluster)]
-
-# copy over associated legend entry
-rat$notes <- leg$notes[match(rat$ID, leg$cluster)]
-
-# make a composite legend label
-rat$legend <- paste0(rat$ID, ') ', rat$notes)
-
-# pack RAT back into raster
-levels(r) <- rat
-
-# sanity-check: do the simplified polygons have the same IDs (cluster number) as raster?
-# yes
-e <- sampleRegular(r, 1000, sp=TRUE)
-e$check <- over(e, mu.simple.spdf)$ID
-e <- as.data.frame(e)
-e <- na.omit(e)
-all(as.character(e$layer) == as.character(e$check))
-
-
-
-## colors suck: pick a new palette, setup so that clusters are arranged via similarity
-
-# simple plot in R, colors hard to see
-png(file='graph-communities-mu-data.png', width=1600, height=1200)
-levelplot(r, col.regions=levels(r)[[1]]$color, xlab="", ylab="", att='legend', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
-dev.off()
+#
+# /!\ Removing raster stuff for now, as it's not used in the paper
+#
+# 
+# ## viz using raster methods
+# # this assumes projected CRS
+# r <- rasterize(mu, raster(extent(mu), resolution = 90), field = 'cluster')
+# projection(r) <- proj4string(mu)
+# 
+# ## kludge for plotting categories
+# # convert to categorical raster
+# r <- as.factor(r)
+# rat <- levels(r)[[1]]
+# 
+# # use previously computed legend of unique cluster IDs and colors
+# # note that the raster legend is missing 3 clusters
+# rat$color <- leg$color[match(rat$ID, leg$cluster)]
+# 
+# # copy over associated legend entry
+# rat$notes <- leg$notes[match(rat$ID, leg$cluster)]
+# 
+# # make a composite legend label
+# rat$legend <- paste0(rat$ID, ') ', rat$notes)
+# 
+# # pack RAT back into raster
+# levels(r) <- rat
+# 
+# # sanity-check: do the simplified polygons have the same IDs (cluster number) as raster?
+# # yes
+# e <- sampleRegular(r, 1000, sp = TRUE)
+# e$check <- over(e, as(mu.simple.spdf, "Spatial"))$ID
+# e <- as.data.frame(e)
+# e <- na.omit(e)
+# all(as.character(e$layer) == as.character(e$check))
+# 
+# 
+# 
+# ## colors suck: pick a new palette, setup so that clusters are arranged via similarity
+# 
+# # simple plot in R, colors hard to see
+# png(file='graph-communities-mu-data.png', width=1600, height=1200)
+# levelplot(r, col.regions=levels(r)[[1]]$color, xlab="", ylab="", att='legend', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
+# dev.off()
+# 
+# writeRaster(r, file='data/mu-polygons-graph-clusters.tif', datatype='INT1U', format='GTiff', options=c("COMPRESS=LZW"), overwrite=TRUE)
 
 # save to external formats for map / figure making
-writeOGR(mu.simple.spdf, dsn='data', layer='graph-and-mu-polygons', driver='ESRI Shapefile', overwrite_layer = TRUE)
-writeRaster(r, file='data/mu-polygons-graph-clusters.tif', datatype='INT1U', format='GTiff', options=c("COMPRESS=LZW"), overwrite=TRUE)
-
-
-
+# writeOGR(mu.simple.spdf, dsn='data', layer='graph-and-mu-polygons', driver='ESRI Shapefile', overwrite_layer = TRUE)
+sf::write_sf(mu.simple.spdf, dsn = 'data', layer = 'graph-and-mu-polygons', driver = 'ESRI Shapefile') 

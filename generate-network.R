@@ -113,7 +113,7 @@ d.interp <- read.csv(file = './expert-interp.csv', stringsAsFactors = FALSE)
 V(g)$notes <- d.interp$notes[match(V(g)$cluster, d.interp$cluster)]
 
 # extract vertex attributes for interpretation and linking to MU data
-d <- as_data_frame(g, what='vertices')
+d <- as_data_frame(g, what = 'vertices')
 names(d)[1] <- 'compname'
 
 

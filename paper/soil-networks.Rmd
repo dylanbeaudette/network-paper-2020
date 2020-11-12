@@ -171,7 +171,7 @@ V(g)$notes <- expert$notes[V(g)$cluster]
 #mu_sf <- st_as_sf(mu)
 # mu_sf$notes <- NULL
 mu_sf <- mu_sf %>% 
-  dplyr::mutate(cluster = as.character(ID)) %>% 
+  dplyr::mutate(cluster = as.character(cluster)) %>%
   dplyr::left_join(expert, by = "cluster")
 
 # # Union based on cluster ID
@@ -728,7 +728,8 @@ print(p_g4)
 
 ```{r map_communities_interp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_communities_interp}Map of the communities identifies on the graph, along with their expert interpretation. The colours used for the detected communities are the same as the one used Figure \\ref{plot_graph_4}.", fig.width=10, fig.height=8}
 mu_notes <- mu_sf %>% 
-  dplyr::select(-ID, -notes) %>% # remove redundant columns
+  dplyr::select(-notes) %>% # remove redundant columns
+  dplyr::mutate(cluster = as.character(cluster)) %>% 
   dplyr::left_join(
     dplyr::mutate(colour_scale_data, cluster = as.character(group)), 
     by = "cluster"
