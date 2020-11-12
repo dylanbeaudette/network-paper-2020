@@ -12,13 +12,61 @@ x <- readRDS('data/component-data.rda')
 m <- component.adj.matrix(x, mu='mukey', co='compname', wt='comppct_r', method = 'community.matrix')
 
 # quick eval
-par(mar=c(0,0,0,0))
-plotSoilRelationGraph(m, vertex.scaling.factor = 1.5, vertex.label.family='sans', vertex.label.cex=0.65)
-plotSoilRelationGraph(m, edge.scaling.factor=5, vertex.scaling.factor = 1.5, spanning.tree=0.25, vertex.label.family='sans', vertex.label.cex=0.65)
+# par(mar=c(0,0,0,0))
+# plotSoilRelationGraph(m, vertex.scaling.factor = 1.5, vertex.label.family='sans', vertex.label.cex=0.65)
+# plotSoilRelationGraph(m, edge.scaling.factor=5, vertex.scaling.factor = 1.5, spanning.tree=0.25, vertex.label.family='sans', vertex.label.cex=0.65)
 
 ## TODO: hand-make graph for more control
 # make graph using defaults specified in sharpshootR::plotSoilRelationGraph()
-g <- plotSoilRelationGraph(m)
+# g <- plotSoilRelationGraph(m)
+
+# generate graph
+g <- graph.adjacency(m, mode = "upper", weighted = TRUE)
+weight <- E(g)$weight
+
+# transfer names
+V(g)$label <- V(g)$name 
+
+# adjust edge width based on weight
+edge.scaling.factor <- 1
+E(g)$width <- sqrt(E(g)$weight) * edge.scaling.factor
+# extract communities
+set.seed(20201113)
+g.com <- cluster_fast_greedy(g)
+# community metrics
+g.com.length <- length(g.com)
+g.com.membership <- membership(g.com)
+# save membership to original graph
+# this is based on vertex order
+V(g)$cluster <- g.com.membership
+
+# colors for communities: choose color palette based on number of communities
+if(g.com.length <= 9 & g.com.length > 2) cols <- brewer.pal(n=g.com.length, name = 'Set1') 
+if(g.com.length < 3) cols <- brewer.pal(n = 3, name = 'Set1')
+if(g.com.length > 9) cols <- colorRampPalette(brewer.pal(n=9, name = 'Set1'))(g.com.length)
+
+# set colors based on community membership
+vertex.alpha <- 0.65
+cols.alpha <- scales::alpha(cols, vertex.alpha)
+V(g)$color <- cols.alpha[g.com.membership]
+
+# get an index to edges associated with series specified in 's'
+el <- get.edgelist(g)
+s <- '' # default behaviour
+idx <- unique(c(which(el[, 1] == s), which(el[, 2] == s)))
+
+# set default edge color
+edge.col <- grey(0.5)
+edge.transparency <- 1
+edge.highlight.col <- 'royalblue'
+
+E(g)$color <- scales::alpha(edge.col, edge.transparency)
+# set edge colors based on optional series name to highlight
+E(g)$color[idx] <- scales::alpha(edge.highlight.col, edge.transparency)
+
+
+
+
 
 # community / cluster labels are returned as of
 # https://github.com/ncss-tech/sharpshootR/commit/5797803c46b1043f658d852624d09ca15df89f17
