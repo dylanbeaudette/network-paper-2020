@@ -50,6 +50,12 @@ vertex.alpha <- 0.65
 cols.alpha <- scales::alpha(cols, vertex.alpha)
 V(g)$color <- cols.alpha[g.com.membership]
 
+# Set vertex sizes
+# scale vertex by degree (number of connections)
+vertex.scaling.factor <- 2
+vertexSize <- degree(g)
+V(g)$size <- sqrt(vertexSize/max(vertexSize)) * 10 * vertex.scaling.factor
+
 # get an index to edges associated with series specified in 's'
 el <- get.edgelist(g)
 s <- '' # default behaviour
