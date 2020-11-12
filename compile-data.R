@@ -42,6 +42,10 @@ x <- x[x$compkind != 'Taxon above family', ]
 #    pro: leaving network is too dense because family level component names collide
 x <- x[x$compkind != 'Family', ]
 
+## TODO:
+# 4. need to exclude family level components by name: there are some (table mountain) that we need to keep
+
+
 ## check: OK
 head(x)
 
