@@ -37,8 +37,10 @@ x$compname[x$compkind == 'Family']
 # 2. consider removing taxa above family
 x <- x[x$compkind != 'Taxon above family', ]
 
-# 3. removing family level components likely too harsh, as we lose riparian zones and similar low-area components
-
+# 3. consider removing family level components:
+#    con: lose riparian zones and similar low-area components
+#    pro: leaving network is too dense because family level component names collide
+x <- x[x$compkind != 'Family', ]
 
 ## check: OK
 head(x)
@@ -55,6 +57,10 @@ mu <- spTransform(mu, CRS('+proj=utm +zone=10 +datum=NAD83'))
 
 # save for later
 # two files, in case we need to re-make one or the other
-saveRDS(x, file='./data/component-data.rda')
-saveRDS(mu, file='./data/spatial-data.rda')
+if(!dir.exists('data')) {
+  dir.create('data')
+}
+
+saveRDS(x, file='data/component-data.rda')
+saveRDS(mu, file='data/spatial-data.rda')
 

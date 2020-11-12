@@ -5,7 +5,6 @@
 library(igraph)
 library(RColorBrewer)
 library(sharpshootR)
-library(plyr)
 
 library(rgdal)
 library(rgeos)
@@ -15,20 +14,23 @@ library(rasterVis)
 
 
 # load relevant data
-# load('data/component-data.rda')
-x <- readRDS('./data/component-data.rda')
-# load('data/spatial-data.rda')
-mu <- readRDS('./data/spatial-data.rda')
-# load('data/cached-graph.rda')
-g <- readRDS('./data/graph.rda')
+x <- readRDS('data/component-data.rda')
+mu <- readRDS('data/spatial-data.rda')
+g <- readRDS('data/graph.rda')
+d <- readRDS('data/vertices_df.rda')
+leg <- readRDS('data/legend.rda')
+
+# list of records by cluster number
+# used to search for map unit component names
+clust.list <- split(d, d$cluster)
 
 ## associate nodes with map units, two options:
-## simple majority:
-## membership by component percent:
+## simple majority: take the component with largest component percentage
+## membership by component percent: search for each component within an MU within clusters
 
 # simple method: reduce musym--compname to 1:1 via majority rule
 # assumption: there are never >1 components with the same name
-# caveat: some map unit symbols will have NO association with graph, based on previous subsetting rules: NULL delineations on map
+# caveat: some map unit symbols will have NO association with graph, based on previous sub-setting rules: NULL delineations on map
 mu.agg.majority <- function(i) {
   # keep the largest component
   idx <- order(i$comppct_r, decreasing = TRUE)
@@ -36,51 +38,96 @@ mu.agg.majority <- function(i) {
   return(res)
 }
 
+# more interesting, likely more accurate method:
+# compute cluster membership by map unit
+
+## TODO: finish adapting previous code to use this new method
+
+searchCluster <- function(cl, s) {
+  any(cl$compname == s)
+}
+
+mu.agg.membership <- function(i) {
+  
+  mat <- matrix(NA, nrow = length(clust.list), ncol = nrow(i))
+  
+  for(m in 1:nrow(i)){
+    s.name <- i$compname[m]
+    s.pct <- i$comppct_r[m]
+    mat[, m] <- sapply(clust.list, searchCluster, s = s.name) * s.pct
+  }
+
+  rs <- rowSums(mat)
+  idx <- which.max(rs)
+  
+  res <- data.frame(
+    mukey = i$mukey[1],
+    cluster = idx,
+    membership = rs[idx],
+    stringsAsFactors = FALSE
+    )
+  
+  return(res)
+}
 
 # create mu -> graph lookup table
-mu.LUT <- ddply(x, 'mukey', mu.agg.majority)
+mu.LUT <-lapply(split(x, x$mukey), mu.agg.membership)
+mu.LUT <- do.call('rbind', mu.LUT)
 
 
-# compnames in graph but not mu.LUT
-setdiff(V(g)$name, unique(mu.LUT$compname))
+# # create mu -> graph lookup table
+# mu.LUT <- lapply(split(x, x$mukey), mu.agg.majority)
+# mu.LUT <- do.call('rbind', mu.LUT)
 
-# in mu.LUT but not in graph
-setdiff(unique(mu.LUT$compname), V(g)$name)
-
-# join musym -- graph via component name
-d <- merge(mu.LUT, d, by='compname', sort=FALSE)
-
-# join() / merge() do strange things in the presence of NA...
-d.no.na <- d[which(!is.na(d$mukey)), ]
-
-# samity-check: musym in map missing from graph--musym association
-# none missing: good
-setdiff(unique(x$musym), d.no.na$musym)
-
-# sanity check: there should be a 1:1 relationship between
-# OK
-all(rowSums(as.matrix(table(d$mukey, d$cluster))) < 2)
+# # component names in graph but not mu.LUT
+# # there are too many
+# setdiff(V(g)$name, unique(mu.LUT$compname))
+# 
+# # in mu.LUT but not in graph
+# # there should be none: OK
+# setdiff(unique(mu.LUT$compname), V(g)$name)
+# 
+# # join mukey -- graph via component name
+# d <- merge(mu.LUT, d, by = 'cluster', sort = FALSE)
+# 
+# # join() / merge() do strange things in the presence of NA...
+# d.no.na <- d[which(!is.na(d$mukey)), ]
+# 
+# # sanity-check: mukey in map missing from graph--mukey association
+# # none missing: good
+# setdiff(unique(x$mukey), d.no.na$mukey)
+# 
+# # sanity check: there should be a 1:1 relationship between
+# # OK
+# all(rowSums(as.matrix(table(d$mukey, d$cluster))) < 2)
 
 
 ## note: there are a couple clusters without corresponding polygons!
 # this breaks in the presence of NA...
-mu <- sp::merge(mu, d.no.na, by.x='mukey', by.y='mukey')
+mu <- sp::merge(mu, mu.LUT, by.x='mukey', by.y='mukey')
 
+## TODO: this is a lot of polygons
 # filter-out polygons with no assigned cluster
 mu <- mu[which(!is.na(mu$cluster)), ]
 
-## TODO: investigate map units (musym) that aren't represented in the graph
+## TODO: investigate map units (mukey) that aren't represented in the graph
 # x[which(x$mukey %in% unique(mu[which(is.na(mu$cluster)), ]$mukey)), ]
 
 # aggregate geometry based on cluster labels
 mu.simple <- gUnionCascaded(mu, as.character(mu$cluster))
-mu.simple.spdf <- SpatialPolygonsDataFrame(mu.simple, data=data.frame(ID=sapply(slot(mu.simple, 'polygons'), slot, 'ID')), match.ID = FALSE)
+mu.simple.spdf <- SpatialPolygonsDataFrame(
+  mu.simple, 
+  data = data.frame(
+    ID = sapply(slot(mu.simple, 'polygons'), slot, 'ID')
+  ), 
+  match.ID = FALSE
+)
 
 
 
 ## viz using raster methods
 # this assumes projected CRS
-r <- rasterize(mu, raster(extent(mu), resolution=90), field='cluster')
+r <- rasterize(mu, raster(extent(mu), resolution = 90), field = 'cluster')
 projection(r) <- proj4string(mu)
 
 ## kludge for plotting categories
@@ -101,7 +148,7 @@ rat$legend <- paste0(rat$ID, ') ', rat$notes)
 # pack RAT back into raster
 levels(r) <- rat
 
-# sanity-check: do the simplified polgons have the same IDs (cluster number) as raster?
+# sanity-check: do the simplified polygons have the same IDs (cluster number) as raster?
 # yes
 e <- sampleRegular(r, 1000, sp=TRUE)
 e$check <- over(e, mu.simple.spdf)$ID
@@ -117,7 +164,7 @@ all(as.character(e$layer) == as.character(e$check))
 levelplot(r, col.regions=c(viridis::viridis(8), viridis::magma(7+2)[-c(1:2)]), xlab="", ylab="", att='legend', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
 
 # simple plot in R, colors hard to see
-png(file='graph-communities-mu-data.png', width=1600, height=1200, type='cairo', antialias = 'subpixel')
+png(file='graph-communities-mu-data.png', width=1600, height=1200)
 levelplot(r, col.regions=levels(r)[[1]]$color, xlab="", ylab="", att='legend', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
 dev.off()
 
