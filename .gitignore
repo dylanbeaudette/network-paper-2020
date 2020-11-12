@@ -41,3 +41,9 @@ Temporary Items
 *_cache/
 *_files/
 ca630-network.pdf
+data/graph-and-mu-polygons.dbf
+data/graph-and-mu-polygons.prj
+data/graph-and-mu-polygons.shp
+data/graph-and-mu-polygons.shx
+data/mu-polygons-graph-clusters.tif
+data/mu-polygons-graph-clusters.tif.aux.xml
