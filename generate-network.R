@@ -40,11 +40,13 @@ g.com.membership <- membership(g.com)
 # this is based on vertex order
 V(g)$cluster <- g.com.membership
 
+## this is from plotSoilRelationGraph
 # colors for communities: choose color palette based on number of communities
 if(g.com.length <= 9 & g.com.length > 2) cols <- brewer.pal(n=g.com.length, name = 'Set1') 
 if(g.com.length < 3) cols <- brewer.pal(n = 3, name = 'Set1')
 if(g.com.length > 9) cols <- colorRampPalette(brewer.pal(n=9, name = 'Set1'))(g.com.length)
 
+## TODO: get colors from expert interp CSV
 # set colors based on community membership
 vertex.alpha <- 0.65
 cols.alpha <- scales::alpha(cols, vertex.alpha)
@@ -103,14 +105,15 @@ if(remakeInterp) {
 }
 
 
-## 
-## DEB: I need to finish the expert interpretation !!!
-##
-
-
 # load expert interpretation and add to graph attributes
-d.interp <- read.csv(file = './expert-interp.csv', stringsAsFactors = FALSE)
-V(g)$notes <- d.interp$notes[match(V(g)$cluster, d.interp$cluster)]
+d.interp <- read.csv(file = 'expert-interp.csv', stringsAsFactors = FALSE)
+
+# format pieces into a useful label
+d.interp$label <- sprintf("%s: %s|%s|%s", d.interp$cluster, d.interp$MLRA.connotative, d.interp$lithology, d.interp$partsize.class)
+
+## TODO: consider saving all of the pieces, or keep in a separate object
+# save to network
+V(g)$notes <- d.interp$label[match(V(g)$cluster, d.interp$cluster)]
 
 # extract vertex attributes for interpretation and linking to MU data
 d <- as_data_frame(g, what = 'vertices')
@@ -128,7 +131,7 @@ pdf(file='ca630-network.pdf', width=15, height=15)
 par(mar=c(0,0,2,0))
 plotSoilRelationGraph(m, vertex.scaling.factor=1.5, main='Calaveras/Tuolumne Co. Soil Survey', vertex.label.family='sans', vertex.label.cex=0.65)
 
-legend('bottomleft', legend=paste0(leg$cluster, ') ', leg$notes), col=leg$color, pch=15, ncol = 4, cex=0.5)
+legend('bottomleft', legend = leg$notes, col = leg$color, pch=15, ncol = 4, cex=0.66)
 dev.off()
 
 

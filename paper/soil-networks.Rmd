@@ -161,26 +161,31 @@ mu_sf <- st_read('../data/graph-and-mu-polygons.shp')
 ```
 
 ```{r expert_interpretation, echo=FALSE, cache=TRUE, message=FALSE}
-expert <- readr::read_csv('../expert-interp.csv') %>% 
+
+
+expert <- readr::read_csv('../expert-interp.csv') %>%
   dplyr::mutate(cluster = as.character(cluster))
 
-# Upload expert notes to graph nodes
-V(g)$notes <- expert$notes[V(g)$cluster]
+## DEB: this is already done in ../generate-network.R
+
+# # Upload expert notes to graph nodes
+# V(g)$notes <- expert$notes[V(g)$cluster]
+
+## DEB: the combination of notes into cluster narrative is done in ../generate-network.R
+## TODO: save this cluster narrative when creating ../data/graph-and-mu-polygons.shp
 
 # Upload expert notes to polygons
-#mu_sf <- st_as_sf(mu)
-# mu_sf$notes <- NULL
-mu_sf <- mu_sf %>% 
+mu_sf <- mu_sf %>%
   dplyr::mutate(cluster = as.character(cluster)) %>%
   dplyr::left_join(expert, by = "cluster")
 
-# # Union based on cluster ID
-# mu_union <- mu_sf %>%
-#   dplyr::mutate(cl = as.character(cluster)) %>% 
-#   dplyr::group_by(cl) %>% 
-#   dplyr::summarise(color = unique(color), notes = unique(notes))
-
-# saveRDS(mu_union, '../outputs/mu_union_ca.rda')
+# # # Union based on cluster ID
+# # mu_union <- mu_sf %>%
+# #   dplyr::mutate(cl = as.character(cluster)) %>% 
+# #   dplyr::group_by(cl) %>% 
+# #   dplyr::summarise(color = unique(color), notes = unique(notes))
+# 
+# # saveRDS(mu_union, '../outputs/mu_union_ca.rda')
 ```
 
 ```{r abundance, cache=TRUE}
@@ -525,7 +530,7 @@ p_ex_graph_3 <- p_ex_graph +
 #   labels = "auto",
 #   align = "h", label_x = 0.5, label_y = 0
 #   )
-library(patchwork)
+
 p_ex_graph_0 + p_ex_graph_1 + p_ex_graph_2 + p_ex_graph_3 + plot_layout(ncol = 2) 
 ```
 
@@ -663,7 +668,6 @@ This shows that...
 
 ```{r plot_graph_combined, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_combined}Graph representation of the soil series co-occurence. ", fig.width=12, fig.height=8}
 # cowplot::plot_grid(p_g1, p_g2, p_g3, nrow = 1, labels = "auto", align = "h", label_x = 0.5, label_y = 0)
-# library(patchwork)
 p_g1
 ```
 
@@ -688,6 +692,7 @@ dg <- degree(g)
 nt <- V(g)$notes %>% unique
 names(nt) <- nt
 
+# I do this too sometimes
 dd <- plyr::ldply(
   nt, 
   function(i) {
@@ -727,6 +732,7 @@ print(p_g4)
 
 
 ```{r map_communities_interp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_communities_interp}Map of the communities identifies on the graph, along with their expert interpretation. The colours used for the detected communities are the same as the one used Figure \\ref{plot_graph_4}.", fig.width=10, fig.height=8}
+## TODO: I need to include the cluster narrative when making the mu_sf source data
 mu_notes <- mu_sf %>% 
   dplyr::select(-notes) %>% # remove redundant columns
   dplyr::mutate(cluster = as.character(cluster)) %>% 
