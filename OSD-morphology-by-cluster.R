@@ -51,3 +51,12 @@ lapply(x, function(i) {
   quantile(sdc$depth)
 })
 
+
+## soil color by cluster
+a <- aggregateColor(z, groups = 'cluster', k = 8)
+
+par(mar = c(4, 1, 1, 1))
+aggregateColorPlot(a, print.label = FALSE)
+
+
+
