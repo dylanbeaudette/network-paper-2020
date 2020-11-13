@@ -28,4 +28,26 @@ lapply(x, function(i) {
   table(i$subgroup)
 })
 
+lapply(x, function(i) {
+  sdc <- getSoilDepthClass(i)
+  round(prop.table(table(sdc$depth.class)), 2)
+})
+
+sapply(x, function(i) {
+  round(prop.table(table(i$tax_partsize)), 2)
+})
+
+sapply(x, function(i) {
+  round(prop.table(table(i$tax_minclass)), 2)
+})
+
+sapply(x, function(i) {
+  round(prop.table(table(i$greatgroup)), 2)
+})
+
+
+lapply(x, function(i) {
+  sdc <- getSoilDepthClass(i)
+  quantile(sdc$depth)
+})
 
