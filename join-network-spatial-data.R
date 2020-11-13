@@ -50,7 +50,7 @@ mu <- sp::merge(mu, mu.LUT, by.x='mukey', by.y='mukey', all.x = TRUE)
 ## TODO: eval via SDA
 # investigate map units (mukey) that aren't represented in the graph
 missing.mukey <- setdiff(mu$mukey, x$mukey)
-saveRDS(missing.mukey, file = 'missing-mukey.rds')
+saveRDS(missing.mukey, file = 'data/missing-mukey.rds')
 
 # filter-out polygons with no assigned cluster
 # 98% of polygons are assigned a cluster

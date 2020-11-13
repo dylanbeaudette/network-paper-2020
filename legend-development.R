@@ -2,6 +2,11 @@ library(data.tree)
 
 x <- read.csv(file = 'expert-interp.csv', stringsAsFactors = FALSE)
 
+# assign connotative colors
+x$MLRA.connotative
+
+
+
 x$path <- with(x, 
                paste(
                  'CA630',

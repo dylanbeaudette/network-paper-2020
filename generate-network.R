@@ -40,10 +40,17 @@ g.com.membership <- membership(g.com)
 # this is based on vertex order
 V(g)$cluster <- g.com.membership
 
+## this is from plotSoilRelationGraph
 # colors for communities: choose color palette based on number of communities
 if(g.com.length <= 9 & g.com.length > 2) cols <- brewer.pal(n=g.com.length, name = 'Set1') 
 if(g.com.length < 3) cols <- brewer.pal(n = 3, name = 'Set1')
 if(g.com.length > 9) cols <- colorRampPalette(brewer.pal(n=9, name = 'Set1'))(g.com.length)
+
+## now that the network is static use a custom color palette
+# cols <- c('')
+
+
+
 
 # set colors based on community membership
 vertex.alpha <- 0.65
