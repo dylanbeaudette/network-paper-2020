@@ -14,6 +14,7 @@ library(sf)
 library(raster)
 library(rasterVis)
 
+source('local-functions.R')
 
 # load relevant data
 x <- readRDS('data/component-data.rda')
@@ -26,97 +27,30 @@ leg <- readRDS('data/legend.rda')
 # used to search for map unit component names
 clust.list <- split(d, d$cluster)
 
-## TODO: switch / adapt to the cluster membership approach, the other method leads to data-loss
 
-
-## associate nodes with map units, two options:
-## simple majority: take the component with largest component percentage
-## membership by component percent: search for each component within an MU within clusters
-
-# # simple method: reduce musym--compname to 1:1 via majority rule
-# # assumption: there are never >1 components with the same name
-# # caveat: some map unit symbols will have NO association with graph, based on previous sub-setting rules: NULL delineations on map
-# mu.agg.majority <- function(i) {
-#   # keep the largest component
-#   idx <- order(i$comppct_r, decreasing = TRUE)
-#   res <- i[idx, ][1, , drop=FALSE]
-#   return(res)
-# }
-
-# more interesting, likely more accurate method:
 # compute cluster membership by map unit
 
-## TODO: finish adapting previous code to use this new method
-
-# search cluster list element `cl` for component name `s`
-searchCluster <- function(cl, s) {
-  any(cl$compname == s)
-}
-
-mu.agg.membership <- function(i) {
-  
-  # rows are cluster indexes, columns are components
-  mat <- sapply(1:nrow(i), function(m) {
-    # current component name and percentage
-    s.name <- i$compname[m]
-    s.pct <- i$comppct_r[m]
-    # trick to convert TRUE -> component percent
-    sapply(clust.list, searchCluster, s = s.name) * s.pct
-  })
-  
-  
-  # tabulate membership percentages by cluster index
-  rs <- rowSums(mat)
-  # highest membership cluster index
-  idx <- which.max(rs)
-  # Shannon entropy from proportions [sum(component pct) / 100]
-  H <- shannonEntropy(rs/100)
-  
-  res <- data.frame(
-    mukey = i$mukey[1],
-    cluster = idx,
-    membership = rs[idx],
-    H = H,
-    stringsAsFactors = FALSE
-    )
-  
-  return(res)
-}
-
-# create mu -> graph lookup table
+# create mu (mukey)-> graph (cluster) look-up table
+# also computes membership percentage and Shannon H
 mu.LUT <- lapply(split(x, x$mukey), mu.agg.membership)
 mu.LUT <- do.call('rbind', mu.LUT)
 
+# check: OK
+head(mu.LUT)
 
-# # create mu -> graph lookup table
-# mu.LUT <- lapply(split(x, x$mukey), mu.agg.majority)
-# mu.LUT <- do.call('rbind', mu.LUT)
+## sanity checks 
 
-# # component names in graph but not mu.LUT
-# # there are too many
-# setdiff(V(g)$name, unique(mu.LUT$compname))
-# 
-# # in mu.LUT but not in graph
-# # there should be none: OK
-# setdiff(unique(mu.LUT$compname), V(g)$name)
-# 
-# # join mukey -- graph via component name
-# d <- merge(mu.LUT, d, by = 'cluster', sort = FALSE)
-# 
-# # join() / merge() do strange things in the presence of NA...
-# d.no.na <- d[which(!is.na(d$mukey)), ]
-# 
-# # sanity-check: mukey in map missing from graph--mukey association
-# # none missing: good
-# setdiff(unique(x$mukey), d.no.na$mukey)
-# 
-# # sanity check: there should be a 1:1 relationship between
-# # OK
-# all(rowSums(as.matrix(table(d$mukey, d$cluster))) < 2)
-
-
+# all clusters should be allocated in the LUT
+# OK
+setdiff(unique(mu.LUT$cluster), V(g)$cluster)
+ 
 # spatial data LEFT JOIN network cluster LUT
 mu <- sp::merge(mu, mu.LUT, by.x='mukey', by.y='mukey', all.x = TRUE)
+
+## TODO: eval via SDA
+# investigate map units (mukey) that aren't represented in the graph
+missing.mukey <- setdiff(mu$mukey, x$mukey)
+saveRDS(missing.mukey, file = 'missing-mukey.rds')
 
 # filter-out polygons with no assigned cluster
 # 98% of polygons are assigned a cluster
@@ -124,8 +58,7 @@ idx <- which(!is.na(mu$cluster))
 length(idx) / nrow(mu)
 mu <- mu[idx, ]
 
-## TODO: investigate map units (mukey) that aren't represented in the graph
-# x[which(x$mukey %in% unique(mu[which(is.na(mu$cluster)), ]$mukey)), ]
+
 
 # aggregate geometry based on cluster labels
 # mu.simple <- gUnionCascaded(mu, as.character(mu$cluster))
@@ -137,54 +70,49 @@ mu <- mu[idx, ]
 #   match.ID = FALSE
 # )
 
+# aggregate geometry based on cluster labels
 mu.simple.spdf <- mu %>% sf::st_as_sf() %>% dplyr::group_by(cluster) %>% dplyr::summarise()
 
-#
-# /!\ Removing raster stuff for now, as it's not used in the paper
-#
-# 
-# ## viz using raster methods
-# # this assumes projected CRS
-# r <- rasterize(mu, raster(extent(mu), resolution = 90), field = 'cluster')
-# projection(r) <- proj4string(mu)
-# 
-# ## kludge for plotting categories
-# # convert to categorical raster
-# r <- as.factor(r)
-# rat <- levels(r)[[1]]
-# 
-# # use previously computed legend of unique cluster IDs and colors
-# # note that the raster legend is missing 3 clusters
-# rat$color <- leg$color[match(rat$ID, leg$cluster)]
-# 
-# # copy over associated legend entry
-# rat$notes <- leg$notes[match(rat$ID, leg$cluster)]
-# 
-# # make a composite legend label
-# rat$legend <- paste0(rat$ID, ') ', rat$notes)
-# 
-# # pack RAT back into raster
-# levels(r) <- rat
-# 
-# # sanity-check: do the simplified polygons have the same IDs (cluster number) as raster?
-# # yes
-# e <- sampleRegular(r, 1000, sp = TRUE)
-# e$check <- over(e, as(mu.simple.spdf, "Spatial"))$ID
-# e <- as.data.frame(e)
-# e <- na.omit(e)
-# all(as.character(e$layer) == as.character(e$check))
-# 
-# 
-# 
-# ## colors suck: pick a new palette, setup so that clusters are arranged via similarity
-# 
-# # simple plot in R, colors hard to see
-# png(file='graph-communities-mu-data.png', width=1600, height=1200)
-# levelplot(r, col.regions=levels(r)[[1]]$color, xlab="", ylab="", att='legend', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
-# dev.off()
-# 
+
+## viz using raster methods
+# this assumes projected CRS
+r <- rasterize(mu, raster(extent(mu), resolution = 90), field = 'cluster')
+projection(r) <- proj4string(mu)
+
+## kludge for plotting categories
+# convert to categorical raster
+r <- as.factor(r)
+rat <- levels(r)[[1]]
+
+# use previously computed legend of unique cluster IDs and colors
+# note that the raster legend is missing 3 clusters
+rat$color <- leg$color[match(rat$ID, leg$cluster)]
+
+# copy over associated legend entry
+rat$notes <- leg$notes[match(rat$ID, leg$cluster)]
+
+# pack RAT back into raster
+levels(r) <- rat
+
+# sanity-check: do the simplified polygons have the same IDs (cluster number) as raster?
+# yes
+e <- sampleRegular(r, 1000, sp = TRUE)
+e$check <- over(e, as(mu.simple.spdf, "Spatial"))$ID
+e <- as.data.frame(e)
+e <- na.omit(e)
+all(as.character(e$layer) == as.character(e$check))
+
+
+
+## colors suck: pick a new palette, setup so that clusters are arranged via similarity
+
+# simple plot in R, colors hard to see
+png(file='graph-communities-mu-data.png', width=1600, height=1200)
+levelplot(r, col.regions=levels(r)[[1]]$color, xlab="", ylab="", att='notes', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
+dev.off()
+
+## only useful for a quick preview
 # writeRaster(r, file='data/mu-polygons-graph-clusters.tif', datatype='INT1U', format='GTiff', options=c("COMPRESS=LZW"), overwrite=TRUE)
 
 # save to external formats for map / figure making
-# writeOGR(mu.simple.spdf, dsn='data', layer='graph-and-mu-polygons', driver='ESRI Shapefile', overwrite_layer = TRUE)
 sf::write_sf(mu.simple.spdf, dsn = 'data', layer = 'graph-and-mu-polygons', driver = 'ESRI Shapefile') 

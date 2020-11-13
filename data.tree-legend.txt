@@ -1,0 +1,50 @@
+                                levelName
+1  CA630                                 
+2   ¦--foothills                         
+3   ¦   ¦--thermic                       
+4   ¦   ¦   ¦--colluvium/residuum        
+5   ¦   ¦   ¦   ¦--mixed                 
+6   ¦   ¦   ¦   ¦   °--oak/grass savanna 
+7   ¦   ¦   ¦   ¦       °--1             
+8   ¦   ¦   ¦   ¦--metasedimentary       
+9   ¦   ¦   ¦   ¦   °--oak woodland      
+10  ¦   ¦   ¦   ¦       °--2             
+11  ¦   ¦   ¦   ¦--serpentenite          
+12  ¦   ¦   ¦   ¦   °--stunted chaparral 
+13  ¦   ¦   ¦   ¦       °--6             
+14  ¦   ¦   ¦   ¦--metavolcanic          
+15  ¦   ¦   ¦   ¦   °--oak woodland      
+16  ¦   ¦   ¦   ¦       °--8             
+17  ¦   ¦   ¦   °--granodiorite          
+18  ¦   ¦   ¦       °--oak woodland      
+19  ¦   ¦   ¦           °--11            
+20  ¦   ¦   °--residuum                  
+21  ¦   ¦       °--basalt                
+22  ¦   ¦           °--grassland         
+23  ¦   ¦               °--12            
+24  ¦   °--mesic                         
+25  ¦       °--colluvium/residuum        
+26  ¦           °--metasedimentary       
+27  ¦               °--mixed conifer     
+28  ¦                   °--10            
+29  ¦--mountains                         
+30  ¦   °--mesic                         
+31  ¦       °--colluvium/residuum        
+32  ¦           ¦--rhyolitic tuff        
+33  ¦           ¦   °--chaparral         
+34  ¦           ¦       °--3             
+35  ¦           ¦--andesite              
+36  ¦           ¦   °--mixed conifer     
+37  ¦           ¦       °--4             
+38  ¦           ¦--metasedimentary       
+39  ¦           ¦   °--oak woodland      
+40  ¦           ¦       °--7             
+41  ¦           °--granodiorite          
+42  ¦               °--mixed conifer     
+43  ¦                   °--9             
+44  °--riparian/floodplains              
+45      °--thermic                       
+46          °--alluvium                  
+47              °--mixed                 
+48                  °--grassland/riparian
+49                      °--5             

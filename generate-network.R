@@ -103,14 +103,15 @@ if(remakeInterp) {
 }
 
 
-## 
-## DEB: I need to finish the expert interpretation !!!
-##
-
-
 # load expert interpretation and add to graph attributes
-d.interp <- read.csv(file = './expert-interp.csv', stringsAsFactors = FALSE)
-V(g)$notes <- d.interp$notes[match(V(g)$cluster, d.interp$cluster)]
+d.interp <- read.csv(file = 'expert-interp.csv', stringsAsFactors = FALSE)
+
+# format pieces into a useful label
+d.interp$label <- sprintf("%s: %s|%s|%s", d.interp$cluster, d.interp$MLRA.connotative, d.interp$lithology, d.interp$partsize.class)
+
+## TODO: consider saving all of the pieces, or keep in a separate object
+# save to network
+V(g)$notes <- d.interp$label[match(V(g)$cluster, d.interp$cluster)]
 
 # extract vertex attributes for interpretation and linking to MU data
 d <- as_data_frame(g, what = 'vertices')
@@ -128,7 +129,7 @@ pdf(file='ca630-network.pdf', width=15, height=15)
 par(mar=c(0,0,2,0))
 plotSoilRelationGraph(m, vertex.scaling.factor=1.5, main='Calaveras/Tuolumne Co. Soil Survey', vertex.label.family='sans', vertex.label.cex=0.65)
 
-legend('bottomleft', legend=paste0(leg$cluster, ') ', leg$notes), col=leg$color, pch=15, ncol = 4, cex=0.5)
+legend('bottomleft', legend = leg$notes, col = leg$color, pch=15, ncol = 4, cex=0.66)
 dev.off()
 
 
