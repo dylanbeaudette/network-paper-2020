@@ -46,12 +46,7 @@ if(g.com.length <= 9 & g.com.length > 2) cols <- brewer.pal(n=g.com.length, name
 if(g.com.length < 3) cols <- brewer.pal(n = 3, name = 'Set1')
 if(g.com.length > 9) cols <- colorRampPalette(brewer.pal(n=9, name = 'Set1'))(g.com.length)
 
-## now that the network is static use a custom color palette
-# cols <- c('')
-
-
-
-
+## TODO: get colors from expert interp CSV
 # set colors based on community membership
 vertex.alpha <- 0.65
 cols.alpha <- scales::alpha(cols, vertex.alpha)
