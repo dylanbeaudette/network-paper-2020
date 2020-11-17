@@ -137,7 +137,10 @@ mu_parsed_leg <- mu.simple.sf %>%
     texture = str_split(leg, pattern = "\\|", simplify = TRUE)[,3],
     landscape = str_trim(landscape),
     parent_material = str_trim(parent_material),
-    texture = str_trim(texture)
+    texture = str_trim(texture),
+    landscape = tolower(landscape),
+    parent_material = tolower(parent_material),
+    texture = tolower(texture)
   )
 
 map_landscape <- mu_parsed_leg %>% 

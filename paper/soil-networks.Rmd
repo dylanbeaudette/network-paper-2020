@@ -756,6 +756,21 @@ pn <- mu.simple.sf %>% #mutate(id = as.numeric(cl)) %>% arrange(id) %>%
   theme_bw()
 
 print(pn)
+
+# Facetted map in case we want to switch to that
+pn_fac <- mu.simple.sf %>% 
+  left_join(leg) %>% 
+  ggplot() + 
+    geom_sf(data = dplyr::select(mu.simple.sf, -cluster), fill = "gray80", colour = "gray30", lwd = 0.05) +
+    geom_sf(aes(fill = as.factor(cluster)), colour = "grey30", lwd = 0.1) + 
+    scale_fill_manual(
+        values = leg$color, 
+        labels = leg$notes,
+        guide = guide_legend(title = "")
+    ) +
+    theme_bw() + 
+  facet_wrap(~cluster)
+
 ```
 
 ## Relationship to various soil-forming factors
