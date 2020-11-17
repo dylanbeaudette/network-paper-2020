@@ -1,7 +1,7 @@
 cluster,STR,pmkind,pmorigin,lithology,ES,MLRA,MLRA.connotative,order,partsize.class,depth.class,notes
 1,thermic,colluvium/residuum,mixed,rhyolte/andesite/eocene paleosols,oak/grass savanna,18,foothills,alfisols/mollisols,loamy/loamy-skeletal,25-100cm,dissected pediment
 2,thermic,colluvium/residuum,metasedimentary,slate/phyllite/marble,oak woodland,18,foothills,alfisols,fine-loamy/loamy-skeletal,25-150cm,calaveras complex
-3,mesic,colluvium/residuum,rhyolitic tuff,rhyolitic tuff,chaparral,22A,mountains,inceptisols,Fine-loamy,150-200+cm,valley springs and mehrten formation
+3,mesic,colluvium/residuum,rhyolitic tuff,rhyolitic tuff,chaparral,22A,mountains,inceptisols,fine-loamy,150-200+cm,valley springs and mehrten formation
 4,mesic,colluvium/residuum,andesite,andesitic lahar,mixed conifer,22A,mountains,andisols,medial/medial-skeletal/medial over loamy,100-200+cm,
 5,thermic,alluvium,mixed,mixed alluvium,grassland/riparian,17,riparian/floodplains,mollisols,coarse-loamy/fine,200+cm,
 6,thermic,colluvium/residuum,serpentenite,serpentenite,stunted chaparral,18,foothills,alfisols,loamy-skeletal/fine,25-100cm,
