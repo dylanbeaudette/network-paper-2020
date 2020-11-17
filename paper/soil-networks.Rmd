@@ -157,7 +157,7 @@ leg <- readRDS('../data/legend.rda')
 # mu.simple <- rgeos::gUnionCascaded(mu, as.character(mu$cluster))
 # mu.simple.spdf <- sp::SpatialPolygonsDataFrame(mu.simple, data=data.frame(ID=sapply(slot(mu.simple, 'polygons'), slot, 'ID')), match.ID = FALSE)
 
-mu_sf <- st_read('../data/graph-and-mu-polygons.shp')
+mu_sf <- st_read('../data/graph-and-mu-polygons.shp', quiet = TRUE)
 # saveRDS(mu, '../outputs/mu_ca.rda')
 ```
 
@@ -742,7 +742,7 @@ print(p_g4)
 #     by = "cluster"
 #   )
 
-mu.simple.sf <- st_read('../data/graph-and-mu-polygons.gpkg')
+mu.simple.sf <- st_read('../data/graph-and-mu-polygons.gpkg', quiet = TRUE)
 
 pn <- mu.simple.sf %>% #mutate(id = as.numeric(cl)) %>% arrange(id) %>% 
   ggplot() + 
