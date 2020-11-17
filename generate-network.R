@@ -109,14 +109,14 @@ if(remakeInterp) {
 d.interp <- read.csv(file = 'expert-interp.csv', stringsAsFactors = FALSE)
 
 # format pieces into a useful label
-d.interp$label <- sprintf("%s: %s|%s|%s", d.interp$cluster, d.interp$MLRA.connotative, d.interp$lithology, d.interp$partsize.class)
+d.interp$label <- sprintf("%s: %s | %s | %s", d.interp$cluster, d.interp$MLRA.connotative, d.interp$lithology, d.interp$partsize.class)
 
 ## TODO: consider saving all of the pieces, or keep in a separate object
 # save to network
 V(g)$notes <- d.interp$label[match(V(g)$cluster, d.interp$cluster)]
 
 # extract vertex attributes for interpretation and linking to MU data
-d <- as_data_frame(g, what = 'vertices')
+d <- igraph::as_data_frame(g, what = 'vertices')
 names(d)[1] <- 'compname'
 
 
