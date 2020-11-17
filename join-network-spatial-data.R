@@ -13,6 +13,7 @@ library(sp)
 library(sf)
 library(raster)
 library(rasterVis)
+library(ggplot2)
 
 source('local-functions.R')
 
@@ -71,8 +72,13 @@ mu <- mu[idx, ]
 # )
 
 # aggregate geometry based on cluster labels
-mu.simple.spdf <- mu %>% sf::st_as_sf() %>% dplyr::group_by(cluster) %>% dplyr::summarise()
+mu.simple.sf <- mu %>% 
+  sf::st_as_sf() %>%
+  dplyr::group_by(cluster) %>% 
+  dplyr::summarise()
 
+mu.simple.spdf <- as(mu.simple.sf, "Spatial")
+mu.simple.spdf <- spTransform(mu.simple.spdf, CRS(st_crs(mu.simple.sf)$input))
 
 ## viz using raster methods
 # this assumes projected CRS
@@ -97,7 +103,7 @@ levels(r) <- rat
 # sanity-check: do the simplified polygons have the same IDs (cluster number) as raster?
 # yes
 e <- sampleRegular(r, 1000, sp = TRUE)
-e$check <- over(e, as(mu.simple.spdf, "Spatial"))$ID
+e$check <- over(e, mu.simple.spdf)$ID
 e <- as.data.frame(e)
 e <- na.omit(e)
 all(as.character(e$layer) == as.character(e$check))
@@ -111,8 +117,18 @@ png(file='graph-communities-mu-data.png', width=1600, height=1200)
 levelplot(r, col.regions=levels(r)[[1]]$color, xlab="", ylab="", att='notes', maxpixels=1e5, colorkey=list(space='right', labels=list(cex=1.25)))
 dev.off()
 
+# Simple plot using sf, to try and debug where things go wrong
+ggplot(data = mu.simple.sf) +
+  geom_sf(aes(fill = as.factor(cluster)), colour = "gray30", lwd = 0.1) +
+  scale_fill_manual(
+    "",
+    values = leg$color,
+    labels = leg$notes
+  ) + 
+  theme_bw()
+
 ## only useful for a quick preview
 # writeRaster(r, file='data/mu-polygons-graph-clusters.tif', datatype='INT1U', format='GTiff', options=c("COMPRESS=LZW"), overwrite=TRUE)
 
 # save to external formats for map / figure making
-sf::write_sf(mu.simple.spdf, dsn = 'data', layer = 'graph-and-mu-polygons', driver = 'ESRI Shapefile') 
+sf::write_sf(mu.simple.sf, dsn = 'data', layer = 'graph-and-mu-polygons', driver = 'ESRI Shapefile') 
