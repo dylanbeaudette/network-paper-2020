@@ -14,6 +14,7 @@ library(sf)
 library(raster)
 library(rasterVis)
 library(ggplot2)
+library(stringr)
 
 source('local-functions.R')
 
@@ -118,7 +119,7 @@ levelplot(r, col.regions=levels(r)[[1]]$color, xlab="", ylab="", att='notes', ma
 dev.off()
 
 # Simple plot using sf, to try and debug where things go wrong
-ggplot(data = mu.simple.sf) +
+map_sf <- ggplot(data = mu.simple.sf) +
   geom_sf(aes(fill = as.factor(cluster)), colour = "gray30", lwd = 0.1) +
   scale_fill_manual(
     "",
@@ -126,6 +127,45 @@ ggplot(data = mu.simple.sf) +
     labels = leg$notes
   ) + 
   theme_bw()
+
+mu_parsed_leg <- mu.simple.sf %>%
+  left_join(leg) %>% 
+  mutate(
+    leg = str_sub(notes, 4, str_length(notes)),
+    landscape = str_split(leg, pattern = "\\|", simplify = TRUE)[,1],
+    parent_material = str_split(leg, pattern = "\\|", simplify = TRUE)[,2],
+    texture = str_split(leg, pattern = "\\|", simplify = TRUE)[,3],
+    landscape = str_trim(landscape),
+    parent_material = str_trim(parent_material),
+    texture = str_trim(texture)
+  )
+
+map_landscape <- mu_parsed_leg %>% 
+  group_by(landscape) %>% 
+  summarise() %>% 
+  ggplot() +
+  geom_sf(data = mu.simple.sf, fill = "gray80", colour = "gray30", lwd = 0.05) +
+  geom_sf(aes(fill = landscape), colour = "gray30", lwd = 0.1) +
+  theme_bw() +
+  facet_wrap(~landscape)
+
+map_pm <- mu_parsed_leg %>% 
+  group_by(parent_material) %>% 
+  summarise() %>% 
+  ggplot() +
+  geom_sf(data = mu.simple.sf, fill = "gray80", colour = "gray30", lwd = 0.05) +
+  geom_sf(aes(fill = parent_material), colour = "gray30", lwd = 0.1) +
+  theme_bw() +
+  facet_wrap(~parent_material)
+
+map_texture <- mu_parsed_leg %>% 
+  group_by(texture) %>% 
+  summarise() %>% 
+  ggplot() +
+  geom_sf(data = mu.simple.sf, fill = "gray80", colour = "gray30", lwd = 0.05) +
+  geom_sf(aes(fill = texture), colour = "gray30", lwd = 0.1) +
+  theme_bw() +
+  facet_wrap(~texture)
 
 ## only useful for a quick preview
 # writeRaster(r, file='data/mu-polygons-graph-clusters.tif', datatype='INT1U', format='GTiff', options=c("COMPRESS=LZW"), overwrite=TRUE)
