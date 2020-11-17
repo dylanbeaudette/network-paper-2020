@@ -2,6 +2,7 @@
 ## P. Roudier, D.E. Beaudette, Dion O'Neal
 
 library(igraph)
+library(ape)
 library(RColorBrewer)
 library(sharpshootR)
 
@@ -74,8 +75,6 @@ E(g)$color[idx] <- scales::alpha(edge.highlight.col, edge.transparency)
 
 
 
-
-
 # community / cluster labels are returned as of
 # https://github.com/ncss-tech/sharpshootR/commit/5797803c46b1043f658d852624d09ca15df89f17
 V(g)$cluster
@@ -134,6 +133,16 @@ plotSoilRelationGraph(m, vertex.scaling.factor=1.5, main='Calaveras/Tuolumne Co.
 legend('bottomleft', legend = leg$notes, col = leg$color, pch=15, ncol = 4, cex=0.66)
 dev.off()
 
+
+
+
+## DEB: Pierre, nice idea on a more direct measure / visualization of between cluster distances 
+hc <- as.hclust(g.com)
+# hc <- as.phylo(hc)
+
+# but then what?
+
+# consider using climate data, series-level summaries, or component (soil property/condition) data
 
 
 # save
