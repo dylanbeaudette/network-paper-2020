@@ -132,3 +132,5 @@ ggplot(data = mu.simple.sf) +
 
 # save to external formats for map / figure making
 sf::write_sf(mu.simple.sf, dsn = 'data', layer = 'graph-and-mu-polygons', driver = 'ESRI Shapefile') 
+sf::write_sf(mu.simple.sf, 'data/graph-and-mu-polygons.gpkg')
+
