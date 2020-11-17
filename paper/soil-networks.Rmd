@@ -267,7 +267,7 @@ Probably explain the concept of MU here too.
 
 ```{r map_survey, cache=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_survey}Context of the study, showing the outlines of the mapping units present in the soil survey. The study site is located on the foothills of the Sierra Nevada in California, USA.", cache=TRUE}
 m_survey <- ggplot(st_as_sf(mu)) +
-  geom_sf(lwd = 0.2) +
+  geom_sf(lwd = 0.1) +
   ggsn::north(data = st_as_sf(mu)) +
   ggsn::scalebar(data = st_as_sf(mu)[, 'geometry'], transform = FALSE, dist = 10, dist_unit = "km", location = "bottomleft", st.size = 3) +
   labs(x = "", y = "") +
@@ -730,6 +730,15 @@ print(p_g4)
 <!-- print(p) -->
 <!-- ``` -->
 
+```{r map_entropy, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_entropy}Shannon's entropy values for each map unit.", fig.width=10, fig.height=8}
+map_entropy <- st_read('../data/mu-with-cluster-membership.gpkg', quiet = TRUE) %>%
+  ggplot() + 
+  geom_sf(aes(fill = H), colour = NA) + 
+  scale_fill_viridis("Shannon's entropy") + 
+  theme_bw()
+
+print(map_entropy)
+```
 
 ```{r map_communities_interp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_communities_interp}Map of the communities identifies on the graph, along with their expert interpretation. The colours used for the detected communities are the same as the one used Figure \\ref{plot_graph_4}.", fig.width=10, fig.height=8}
 ## TODO: I need to include the cluster narrative when making the mu_sf source data

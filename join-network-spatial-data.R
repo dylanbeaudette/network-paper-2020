@@ -60,7 +60,7 @@ idx <- which(!is.na(mu$cluster))
 length(idx) / nrow(mu)
 mu <- mu[idx, ]
 
-
+write_sf(st_as_sf(mu), 'data/mu-with-cluster-membership.gpkg')
 
 # aggregate geometry based on cluster labels
 # mu.simple <- gUnionCascaded(mu, as.character(mu$cluster))
