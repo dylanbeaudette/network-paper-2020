@@ -101,6 +101,7 @@ x <- readRDS('../data/component-data.rda')
 mu <- readRDS('../data/spatial-data.rda')
 g <- readRDS('../data/graph.rda')
 d <- readRDS('../data/vertices_df.rda')
+leg <- readRDS('../data/legend.rda')
 ```
 
 ```{r preprocessing, echo=FALSE, cache=TRUE}
@@ -161,7 +162,6 @@ mu_sf <- st_read('../data/graph-and-mu-polygons.shp')
 ```
 
 ```{r expert_interpretation, echo=FALSE, cache=TRUE, message=FALSE}
-
 
 expert <- readr::read_csv('../expert-interp.csv') %>%
   dplyr::mutate(cluster = as.character(cluster))
@@ -733,18 +733,25 @@ print(p_g4)
 
 ```{r map_communities_interp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_communities_interp}Map of the communities identifies on the graph, along with their expert interpretation. The colours used for the detected communities are the same as the one used Figure \\ref{plot_graph_4}.", fig.width=10, fig.height=8}
 ## TODO: I need to include the cluster narrative when making the mu_sf source data
-mu_notes <- mu_sf %>% 
-  dplyr::select(-notes) %>% # remove redundant columns
-  dplyr::mutate(cluster = as.character(cluster)) %>% 
-  dplyr::left_join(
-    dplyr::mutate(colour_scale_data, cluster = as.character(group)), 
-    by = "cluster"
-  )
 
-pn <- mu_notes %>% #mutate(id = as.numeric(cl)) %>% arrange(id) %>% 
+# mu_notes <- mu_sf %>% 
+#   dplyr::select(-notes) %>% # remove redundant columns
+#   dplyr::mutate(cluster = as.character(cluster)) %>% 
+#   dplyr::left_join(
+#     dplyr::mutate(colour_scale_data, cluster = as.character(group)), 
+#     by = "cluster"
+#   )
+
+mu.simple.sf <- st_read('../data/graph-and-mu-polygons.gpkg')
+
+pn <- mu.simple.sf %>% #mutate(id = as.numeric(cl)) %>% arrange(id) %>% 
   ggplot() + 
-  geom_sf(aes(fill = notes), colour = "grey70", lwd = 0.05) + 
-  scale_fill_manual(values = colour_scale_data$color_simple, guide = guide_legend(title = "")) +
+  geom_sf(aes(fill = as.factor(cluster)), colour = "grey30", lwd = 0.1) + 
+  scale_fill_manual(
+    values = leg$color, 
+    labels = leg$notes,
+    guide = guide_legend(title = "")
+  ) +
   # scale_fill_manual(values = mu_union$color, guide = guide_legend(title = "")) + 
   theme_bw()
 
