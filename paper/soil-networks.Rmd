@@ -21,6 +21,9 @@ address:
 abstract: |
   Soils are arguably one of the most complex materials on Earth, and present a unique challenge for those seeking to constrain spatial variability within the context of soil survey. Across the landscape, different soil types will often be spatially intermingled. This is reflected by soil mapping units that are often composed of more than one soil taxa. The research field of network science offers new mathematical tools to visualize and analyze existing soil survey data, and explore its complex relational interactions. In this paper, we extract and visualize pedological information by analyzing the co-occurrence of soil taxa using a network approach. For any level of a given hierarchical soil classification system, the co-occurrence of soil taxa within and between neighboring soil mapping units can be described as a network graph. The structural properties of the resulting graphs can be analyzed, and tools such as community structure detection are used to classify their different nodes. Soilscapes are then delineated by mapping the identified communities back in geographical space. This approach also gives a method for quantifying the pedological complexity of different regions based on their constituent soil types, using metrics such as graph connectivity. Different levels of granularity for both the regional data and the soil classification data allow for views at different scales. Network science offers the opportunity of new insights from looking at existing data in a new way. Soil survey data from USDA-NRCS (USA) is used to illustrate the value and originality of these new approaches.
   
+preamble: 
+  \usepackage{subcaption}
+  
 bibliography: references.bib
 output:
   base_format: rticles::elsevier_article
@@ -312,16 +315,62 @@ Namely, these tools were used to analyse the co-occurence of different soil seri
 
 The original, tabular soil survey data was organised so that one or more soil series were associated within each map unit delineated over the survey area.   
 Additionally, the relative proportion of each soil serie within each map unit was estimated by the pedologist who surveyed the area (Table \ref{tab:sim_mat_1}).
-
-In this study, we refer to "soil siblings" as the set of soil series that co-occur in at least one map unit. 
-On the subset of soil survey data provided Table \ref{tab:sim_mat_1}, soil series \textit{Amador}, \textit{Gillender}, \textit{Ranchoseco}, \textit{Vleck}, \textit{Pardee}, and \textit{Peters} are all siblings, since they co-occur in map unit "1612048". 
-However, \textit{Vleck} and \textit{Miltonhills} are not siblings, at least on that subset of data, since they do not co-occur in any of the two map units presented in this Table. 
+In this study, the soil series that co-occur in at least one map unit are referred to as being "soil siblings". 
+On the soil survey data snippet provided Table \ref{tab:sim_mat_1}, soil series \textit{Amador}, \textit{Gillender}, \textit{Ranchoseco}, \textit{Vleck}, \textit{Pardee}, and \textit{Peters} are all siblings, since they co-occur in map unit "1612048". 
+However, \textit{Vleck} and \textit{Miltonhills} are \emph{not} siblings -- at least on that subset of data -- since they do not co-occur in any of the two map units presented. 
 It is important to note that there is not necessarily any taxonomical links between siblings --- the only condition for two soil series to be "siblings" is that they need to be mapped within same map units at least once. 
 
 ### Quantifying soil series associations
 
 An intuitive way to detect soil siblings, and therefore represent the co-occurrence between the different soil series present in the surveyed region, is to compute a co-occurrence matrix [@legendre2012numerical]. 
 A co-occurrence matrix tabulates the number of times each possible combination of two soil series co-occur in map units of the surveyed area (Table \ref{tab:sim_mat_2}). 
+
+<!-- \begin{table}[!htb] -->
+<!--     \caption{Global caption} -->
+<!--     \begin{subtable}{.5\linewidth} -->
+<!--       \centering -->
+<!--         \caption{Co-occurence matrix derived from the subset of soil suvey data presented in Table \ref{tab:sim_mat_1}.} -->
+<!--         \begin{tabular}{cccccccc} -->
+<!--           \hline -->
+<!--            & Gillender & Miltonhills & Pardee & Peters & Ranchoseco & Redding & Vleck \\ -->
+<!--           \hline -->
+<!--           Amador & 2 & 1 & 2 & 1 & 1 & 1 & 1 \\ -->
+<!--           Gillender & 0 & 1 & 2 & 1 & 1 & 1 & 1\\ -->
+<!--           Miltonhills & 0 & 0 & 1 & 0 & 0 & 1 & 0\\ -->
+<!--           Pardee & 0 & 0 & 0 & 1 & 1 & 1 & 1 \\ -->
+<!--           Peters & 0 & 0 & 0 & 0 & 1 & 0 & 1 \\ -->
+<!--           Ranchoseco & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\ -->
+<!--           Redding & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ -->
+<!--           Vleck & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\  -->
+<!--           \hline -->
+<!--         \end{tabular} -->
+<!--     \end{subtable}% -->
+<!--     \vfill -->
+<!--     \begin{subtable}{.5\linewidth} -->
+<!--       \centering -->
+<!--         \caption{Pseudo-community matrix derived from the soil survey data. Each row represents a soil series, while each column represent a map unit code. The tranformation used the relative percentage of soil siblings to weight the presence of soil siblings across the different map units.} -->
+<!--         \begin{tabular}{ccccccccc} -->
+<!--           \hline -->
+<!--            & 461845 & 461980 & 462528 & 462529 & 462530 & 462531 & 462954 & 462955 \\ -->
+<!--           \hline -->
+<!--           Amador & 45 & 25 & 85 & 85 & 85 & 85 & 85 & 85 \\ -->
+<!--           Corning & 0 & 5 & 0 & 0 & 0 & 0 & 0 & 0\\ -->
+<!--           Exchequer & 0 & 0 & 5 & 5 & 5 & 5 & 0 & 0\\ -->
+<!--           Gillender & 40 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ -->
+<!--           Hornitos & 0 & 0 & 5 & 5 & 5 & 5 & 10 & 10 \\ -->
+<!--           Inks & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ -->
+<!--           Miltonhills & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ -->
+<!--           Pardee & 3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ -->
+<!--           Pentz & 0 & 0 & 5 & 5 & 5 & 5 & 5 & 5 \\ -->
+<!--           Peters & 3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ -->
+<!--           Ranchoseco & 3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ -->
+<!--           Redding & 0 & 4 & 0 & 0 & 0 & 0 & 0 & 0 \\ -->
+<!--           Vleck & 3 & 40 & 0 & 0 & 0 & 0 & 0 & 0\\ -->
+<!--           \hline -->
+<!--           \end{tabular} -->
+<!--     \end{subtable}  -->
+<!-- \end{table} -->
+
 
 \begin{table}
 \centering
@@ -335,8 +384,8 @@ Miltonhills & 0 & 0 & 1 & 0 & 0 & 1 & 0\\
 Pardee & 0 & 0 & 0 & 1 & 1 & 1 & 1 \\
 Peters & 0 & 0 & 0 & 0 & 1 & 0 & 1 \\
 Ranchoseco & 0 & 0 & 0 & 0 & 0 & 0 & 1 \\
-Redding & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ \\
-Vleck & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ \\
+Redding & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+Vleck & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 
 \hline
 \end{tabular}
 \caption{Co-occurence matrix derived from the subset of soil suvey data presented in Table \ref{tab:sim_mat_1}}
@@ -578,6 +627,7 @@ p_comp_per_pols <- x %>%
 
 print(p_comp_per_pols)
 ```
+
 ## Abundance
 
 ```{r fig_abundance, echo=FALSE, fig.cap="\\label{fig:abundance}Relative abundance of the different soil components found in the surveyed region."}
