@@ -16,6 +16,8 @@ library(rasterVis)
 library(ggplot2)
 library(stringr)
 
+library(dplyr)
+
 source('local-functions.R')
 
 # load relevant data
