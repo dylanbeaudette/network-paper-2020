@@ -38,6 +38,7 @@ Temporary Items
 *.rda
 .Rproj.user
 .gitignore
+*.spl
 *_cache/
 *_files/
 ca630-network.pdf
