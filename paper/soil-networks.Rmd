@@ -19,7 +19,10 @@ address:
     address: Te Pūnaha Matatini, A New Zealand Centre of Research Excellence, Private Bag 92019, Auckland 1142, New Zealand
 
 abstract: |
-  Soils are arguably one of the most complex materials on Earth, and present a unique challenge for those seeking to constrain spatial variability within the context of soil survey. Across the landscape, different soil types will often be spatially intermingled. This is reflected by soil mapping units that are often composed of more than one soil taxa. The research field of network science offers new mathematical tools to visualize and analyze existing soil survey data, and explore its complex relational interactions. In this paper, we extract and visualize pedological information by analyzing the co-occurrence of soil taxa using a network approach. For any level of a given hierarchical soil classification system, the co-occurrence of soil taxa within and between neighboring soil mapping units can be described as a network graph. The structural properties of the resulting graphs can be analyzed, and tools such as community structure detection are used to classify their different nodes. Soilscapes are then delineated by mapping the identified communities back in geographical space. This approach also gives a method for quantifying the pedological complexity of different regions based on their constituent soil types, using metrics such as graph connectivity. Different levels of granularity for both the regional data and the soil classification data allow for views at different scales. Network science offers the opportunity of new insights from looking at existing data in a new way. Soil survey data from USDA-NRCS (USA) is used to illustrate the value and originality of these new approaches.
+  Soils are arguably one of the most complex materials on Earth, and present a unique challenge for those seeking to constrain spatial variability within the context of soil survey. Across the landscape, different soil types will often be spatially intermingled. This is reflected by soil mapping units that are often composed of more than one soil taxa. The research field of network science offers new mathematical tools to visualize and analyze existing soil survey data, and explore its complex relational interactions. In this paper, we extract and visualize pedological information by analyzing the co-occurrence of soil taxa using a network approach. For any level of a given hierarchical soil classification system, the co-occurrence of soil taxa within and between neighboring soil mapping units can be described as a network graph. The structural properties of the resulting graphs can be analyzed, and tools such as community structure detection are used to classify their different nodes. Soilscapes are then delineated by mapping the identified communities back in geographical space. This approach also gives a method for quantifying the pedological complexity of different regions based on their constituent soil types, using metrics such as graph connectivity. Different levels of granularity for both the regional data and the soil classification data allow for views at different scales. Network science offers the opportunity of new insights from looking at existing data in a new way. Soil survey data from USDA-NRCS (USA) is used to illustrate the value and originality of these new approaches. 
+  
+  In this study, we analysed the soil map produced by conventional mapping using tools from the field of network science [REFERENCE]. Namely, these tools were used to analyse the co-occurence of different soil series over the survey area.
+
   
 preamble: 
   \usepackage{subcaption}
@@ -304,12 +307,10 @@ mu & component & pct \\
 \end{table}
 
 
-## Creating graphs from soil survey data
+## Representing soil series co-occurence
 
 <!-- The results of the soil survey were analysed using tools from the network science field.  -->
 <!-- All data analysis was done in R [REFERENCE]. -->
-In this study, we analysed the soil map produced by conventional mapping using tools from the field of network science [REFERENCE]. 
-Namely, these tools were used to analyse the co-occurence of different soil series over the survey area. 
 
 ### Soil siblings
 
