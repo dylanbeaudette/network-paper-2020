@@ -647,6 +647,17 @@ Centrality measures: different types.
 
 --> Try and plot spatial map based on centrality
 
+Something from Dion and Emily's paper to simplify and wordsmith:
+The centrality measures used here were chosen to cover a range different types of measures while keeping the range of measures manageable. Specifically, we consider the following (from the igraph package [5]):
+Node Strength An equivalent of node degree that accounts for the differing edge weights in a network. The strength of a node is simply the sum of the weights of edges connected to that node.
+PageRank A popular variant of eigenvector centrality. Eigenvector-based mea- sures consider not only the strength of a node but also how well connected a node is to other nodes with high node strength.
+Kleinburg Centrality A generalisation of eigenvector centrality. Nodes are imbued with two attributes: Authority—how much information/influence is held by the node; and Hubness—how well a node connects to nodes with high authority. If A is the adjacency matrix of a network, the hub score of nodes is calculated as the principle eigenvector of AAT .
+Authority Relatedtohubcentrality,theauthoritycentralityofverticesiscalculated as the principle eigenvector of AT A.
+Diversity The scaled Shannon entropy of the edge weights of a node. Given the context of IO networks it is worth noting that the diversity measure used here is a version of the species diversity measure commonly used in ecology to quantify the diversity of a habitat [9], not the measure of diversity sometimes used in economic geography and popularised by Hausmann and Hidalgo in [8] which is simply the node degree of a binary matrix that measures whether a region is strongly associated with particular products or exports.
+Betweenness The number of weighted shortest paths that pass through a node, given all possible paths between pairs of nodes in the network.
+Closeness The number of steps required to reach every other node in a network from a given node following edge-weighted paths.
+
+
 ## Implementation
 
 The methods described in this paper have been implemented in the R statistical environment [REFERENCE] as part of the `aqp` and `sharpshootR` packages [@beaudette2013algorithms].
