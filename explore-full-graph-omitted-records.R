@@ -22,3 +22,14 @@ pdf(file='ca630-network-full.pdf', width=15, height=15)
 par(mar=c(0,0,0,0))
 plotSoilRelationGraph(m, vertex.scaling.factor = 1.5, vertex.label.family='sans', vertex.label.cex=0.65)
 dev.off()
+
+
+
+
+## TODO: balance detail vs. noise in the network
+## * filter by component name not component type:
+## - ultic haploxeralfs
+## - utlic haploxerolls
+
+
+## TODO: consider making component names unique by finding collisions and then re-naming
