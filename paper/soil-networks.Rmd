@@ -349,12 +349,15 @@ mu & component & pct \\
 
 ### Soil siblings
 
-The original, tabular soil survey data was organised so that one or more soil series were associated within each map unit delineated over the survey area.   
-Additionally, the relative proportion of each soil serie within each map unit was estimated by the pedologist who surveyed the area (Table \ref{tab:sim_mat_1}).
-In this study, the soil series that co-occur in at least one map unit are referred to as being "soil siblings". 
-On the soil survey data snippet provided Table \ref{tab:sim_mat_1}, soil series \textit{Amador}, \textit{Gillender}, \textit{Ranchoseco}, \textit{Vleck}, \textit{Pardee}, and \textit{Peters} are all siblings, since they co-occur in map unit "1612048". 
-However, \textit{Vleck} and \textit{Miltonhills} are \emph{not} siblings -- at least on that subset of data -- since they do not co-occur in any of the two map units presented. 
-It is important to note that there is not necessarily any taxonomical links between siblings --- the only condition for two soil series to be "siblings" is that they need to be mapped within same map units at least once. 
+The conventional soil survey data was organised in a tabular fashion, based on map units. 
+One or more soil series were associated within each map unit delineated over the survey area. 
+Additionally, the relative proportion of each soil series within each map unit was estimated by the pedologist who surveyed the area (Table \ref{tab:sim_mat_1}). 
+In this study, we focus on the co-occurrence of different soil series within the polygonal map units. 
+We propose that the soil series that co-occur in at least one map unit are referred to as being "soil siblings". 
+An example of this concept is presented on a subset of the soil survey data, in Table \ref{tab:sim_mat_1}. 
+In this example, the soil series \textit{Amador}, \textit{Gillender}, \textit{Ranchoseco}, \textit{Vleck}, \textit{Pardee}, and \textit{Peters} are all siblings, because they are all co-occurring in map unit "1612048". 
+However, \textit{Vleck} and \textit{Miltonhills} are \emph{not} siblings (at least on that specific subset of the soil survey data) since they do not co-occur in either of the two map units presented. 
+It is important to note that there is not necessarily any taxonomical links between siblings: the only condition for two soil series to be "siblings" is that they need to be mapped within same map units at least once. 
 
 ### Quantifying soil series associations
 
@@ -435,12 +438,12 @@ The resulting pseudo-community matrix was then standardised relative to the maxi
 The standardised matrix is then used to compute a distance matrix, based on the Jaccard distance [@legendre2012numerical]: 
 
 \begin{equation}
-2 \times B / (1 + B)
+D = 2 \times B / (1 + B)
 \label{eq:jaccard}
 \end{equation}
-where B is Bray-Curtis dissimilarity, defined as:
+where $B(j,  k)$ is Bray-Curtis dissimilarity, defined as:
 \begin{equation}
-D(j,k) = \frac{\sum abs(X(i,j) - X(i, k))}{\sum (X(i, j) + X(i, k))}
+B(j, k) = \frac{\sum abs(X(i,j) - X(i, k))}{\sum (X(i, j) + X(i, k))}
 \label{eq:bray}
 \end{equation}
 where X(i, j) and X(i, k) are the standardised quantity of soil siblings i and map units j and k. 
@@ -451,6 +454,9 @@ S = max(D) - D
 \label{eq:similarity}
 \end{equation}
 where D is the distance matrix obtained via Equation \ref{eq:jaccard}, and S is the resulting similarity matrix.
+
+Alternative methods to constructing a similarity matrix are also possible, such as the methods of revealed comparative advantage and cosine similarity as used by @Balassa:1965ta;@Hidalgo:2009p292 in economics, or the Brainerd-Robinson similarity used in archaeology [@Robinson:1951wy;@Giomi:2019fu]. 
+Fundamentally, all these approaches seek to calculate pair-wise similarities between vectors of relative abundances, and the differences between them are essentially cosmetic [@Mills:2013hn]. 
 
 \begin{table}
 \begin{tabular}{ccccccccc}
@@ -538,12 +544,12 @@ ex_m <- sharpshootR::component.adj.matrix(amador)
 
 In this study, we used the similarity matrix S calculated from the soil survey data matrix using Equation \ref{eq:similarity} as an adjacency matrix to represent the associations of different soil series within the map units. 
 The matrix S was then used to generate an undirected graph representation of the associations between soil siblings (Figure \ref{fig:ex_graph}). 
+In this case, nodes of the graph represent the different soil series, and the edges indicate the pair-wise co-occurrence of the soil series within map units. 
+Weights on the edges can also be used to indicate the strength of the co-occurrence likelihood. 
 The Fruchterman-Reingold layout [@fruchterman1991graph] was used to project the undirected graph as a data visualisation. 
-It is a force-directed layout algorithm, which tries to project a graph so that edges have similar length and do not cross each other. 
+This is a so-called force-spring layout which treats the nodes in the graph as repelling particles, connected via springs (the edges) which constrain them from moving apart. the resulting layout is non-unique but nodes (series) that are more strongly connected via co-occurences will be spatial clustered, while those that are dissimilar will be further apart. 
 
-DION?
-
-```{r ex_graph, echo=FALSE, fig.height=8, fig.width=13, fig.cap="\\label{fig:ex_graph}Generation of an undirected graph representation of soils urvey data. (a) Soil series represented as vertices. (b) "}
+```{r ex_graph, echo=FALSE, fig.height=6, fig.width=8, fig.cap="\\label{fig:ex_graph}Generation of an undirected graph representation of soils urvey data. (a) Soil series represented as vertices. (b) "}
 ex_g <- graph.adjacency(ex_m, mode = "upper", weighted = TRUE)
 
 # Size (abundance)
@@ -624,11 +630,22 @@ p_ex_graph_0 + p_ex_graph_1 + p_ex_graph_2 + p_ex_graph_3 + plot_layout(ncol = 2
 ### Soil series communities identification
 
 A community structure detection method was applied on the undirected graph derived from the soil survey data. 
-We used the fast greedy modularity optimisation algorithm [@clauset2004finding], which... 
+Community detection on networks seeks to identify clusters of nodes that are more strongly connected within the cluster than they are to nodes in other clusters. 
+The most common method of algorithmically identifying communities is modularity optimisation. 
+This determines a set of non-overlapping partitions of the nodes in the network. 
+Unlike other clustering methods such as k-means, the optimal number of clusters or communities is determined as part of the community detection.  
+Here we used the fast greedy modularity optimisation algorithm [@clauset2004finding].  
 
 ### Network metrics
 
-Degree? Betweeness?
+Number of distinct components -- distinct/disconnected subgraphs
+Number of communities (bounded by number of components)
+Centrality measures: different types. 
+ - Degree centrality -- measure how "important" is a node. Tells you how "ubiquitous"/"social" a soil series -- ie high degree centrailyty, that's a soil series that co-coccur with many others
+ - Eigenvector centrality: how well connected are the well connected nodes to other well connected nodes (PageRank): if high the soil series that you are connected to are also highly connected. Socialbale soils connected to ither sociabale soils.
+ - Betweeness centrality: how many paths go through a node. Soil series that bridges different communities. That's soils occurring on boundaries of communities? Suggest they can adapt to different soil forming factors combination? Reveal soil that have ubiquitous soil formation processes? 
+
+--> Try and plot spatial map based on centrality
 
 ## Implementation
 
@@ -645,7 +662,7 @@ Figure \ref{fig:components_per_polygon} shows the distribution of the number of 
 Results show that a large majority of map units are mapped using more than one soil component, with the average number of components used being around 3. 
 This shows that most map units record a co-occurence between three or more soil siblings. 
 
-```{r components_per_polygon, echo=FALSE, fig.cap="\\label{fig:components_per_polygon}Number of soil components mapped in the different map units in the surveyed region."}
+```{r components_per_polygon, echo=FALSE, fig.cap="\\label{fig:components_per_polygon}Number of soil components mapped in the different map units in the surveyed region.", fig.width=6, fig.height=4}
 # Number of components per polygon
 p_comp_per_pols <- x %>% 
   # dplyr::group_by(dmudesc) %>%
