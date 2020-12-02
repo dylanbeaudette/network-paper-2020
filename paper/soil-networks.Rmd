@@ -69,7 +69,7 @@ Define:
 
 
 Key Points
-- soil series are convenient containers / labels for soil property and condition functions + covariance structure
+- soil series are convenient containers / labels for soil property / condition (depth) functions + covariance structure
 - components inherits from soil series as repeating
 
 
@@ -77,7 +77,12 @@ Graph
 - community detection: pros / cons (I'm not very familiar with underlying algorithm, e.g. how is `n` set?)
 - linkages between communities: significance of those components that connect between communities
 - island communities: usually represent contrasting properties or conditions that affect management (see clusters 6, 12)
-- 
+
+
+Methods / Data Prep
+- filtering of components: some MU / components not present in the final graph (quantify area / number)
+- adjacency built from component names, higher-taxa not specific enough | name collisions | overly-complex (noisy) graph
+
 
 
 
