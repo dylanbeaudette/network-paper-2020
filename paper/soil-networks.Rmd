@@ -638,25 +638,34 @@ Here we used the fast greedy modularity optimisation algorithm [@clauset2004find
 
 ### Network metrics
 
-Number of distinct components -- distinct/disconnected subgraphs
-Number of communities (bounded by number of components)
-Centrality measures: different types. 
- - Degree centrality -- measure how "important" is a node. Tells you how "ubiquitous"/"social" a soil series -- ie high degree centrailyty, that's a soil series that co-coccur with many others
- - Eigenvector centrality: how well connected are the well connected nodes to other well connected nodes (PageRank): if high the soil series that you are connected to are also highly connected. Socialbale soils connected to ither sociabale soils.
- - Betweeness centrality: how many paths go through a node. Soil series that bridges different communities. That's soils occurring on boundaries of communities? Suggest they can adapt to different soil forming factors combination? Reveal soil that have ubiquitous soil formation processes? 
+A range of network metrics can be derived from the topology of the graph. Below, we list some metrics that are of potential use for investigating/understanding soil networks. These can be split into local measures (specific to each node) and global measures (that apply to the whole network).
+
+- **Number of connected components:** Networks do not need to comprise of a single connected component.  The number of connected componts of a network is the number of distinct subgraphs that the network is comprised of. For example it is possible to have an isolated pair of soil series that are connected to each other, but to no other series in the network.
+
+- **Number of communities:** This is derived from the community detection results. Since communitiest can not span across disconnected subgraphs, the number of communities is bounded below by the number of connected componets.
+
+ - **Node Centrality:** This measures, broadly, the ``importance'' of a node in the topology of the network. A number of different centrality measures exist. We consider the following:
+
+  - Node degree: this simply the number of links or edges connected to a node. It gives an indication of how "ubiquitous"/"social" a soil series -- ie high degree centrailyty, that's a soil series that co-coccur with many others.
+  - Node strength: for weighted networks, the strength of a node is the sum of the weights of the edges connected to that node. For unweiughted netowrks, node strenght is eual to degree centrality.
+ - PageRank: A popular variant of eigenvector centrality. Eigenvector-based measures consider not only the strength of a node but also how well connected a node is to other nodes with high node strength. That is, if the soil series that a node is connected to is also highly connected. (Socialbale soils connected to ither sociabale soils.)
+ - Betweeness centrality:  The number of weighted shortest paths that pass through a node, given all possible paths between pairs of nodes in the network. In the contxt of soil networks, series with high betweenness centrality are those that are found in common with mulitple communities of soil series. that is they share similarirty with soils from more than one communiyt of soils
+ 
+ FOR DISCUSSION Suggest they can adapt to different soil forming factors combination? Reveal soil that have ubiquitous soil formation processes? 
 
 --> Try and plot spatial map based on centrality
+--> The issue with betweeness is that it does not distinguish between "bridginess" between community vs. being in the middle of heaps of links. To analyse the "bridgy" soil series, we might pick them manually from the network.  
 
-Something from Dion and Emily's paper to simplify and wordsmith:
-The centrality measures used here were chosen to cover a range different types of measures while keeping the range of measures manageable. Specifically, we consider the following (from the igraph package [5]):
-Node Strength An equivalent of node degree that accounts for the differing edge weights in a network. The strength of a node is simply the sum of the weights of edges connected to that node.
-PageRank A popular variant of eigenvector centrality. Eigenvector-based mea- sures consider not only the strength of a node but also how well connected a node is to other nodes with high node strength.
-Kleinburg Centrality A generalisation of eigenvector centrality. Nodes are imbued with two attributes: Authority—how much information/influence is held by the node; and Hubness—how well a node connects to nodes with high authority. If A is the adjacency matrix of a network, the hub score of nodes is calculated as the principle eigenvector of AAT .
-Authority Relatedtohubcentrality,theauthoritycentralityofverticesiscalculated as the principle eigenvector of AT A.
-Diversity The scaled Shannon entropy of the edge weights of a node. Given the context of IO networks it is worth noting that the diversity measure used here is a version of the species diversity measure commonly used in ecology to quantify the diversity of a habitat [9], not the measure of diversity sometimes used in economic geography and popularised by Hausmann and Hidalgo in [8] which is simply the node degree of a binary matrix that measures whether a region is strongly associated with particular products or exports.
-Betweenness The number of weighted shortest paths that pass through a node, given all possible paths between pairs of nodes in the network.
-Closeness The number of steps required to reach every other node in a network from a given node following edge-weighted paths.
-
+```{r metrics, echo=FALSE}
+# Node degree
+V(g)$degree <- degree(g)
+# Node strength
+V(g)$strength <- strength(g)
+# PageRank
+V(g)$pr <- page_rank(g)$vector
+# Betweeness
+V(g)$betweeness <- betweenness(g)
+```
 
 ## Implementation
 
