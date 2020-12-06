@@ -114,6 +114,15 @@ d.interp$label <- sprintf("%s: %s | %s | %s", d.interp$cluster, d.interp$MLRA.co
 # save to network
 V(g)$notes <- d.interp$label[match(V(g)$cluster, d.interp$cluster)]
 
+# Saving bits individually
+V(g)$STR <- d.interp$STR
+V(g)$pmkind <- d.interp$pmkind
+V(g)$pmorigin <- d.interp$pmorigin
+V(g)$lithology <- d.interp$lithology
+V(g)$ES <- d.interp$ES
+V(g)$MLRA.connotative <- d.interp$MLRA.connotative
+V(g)$partsize.class <- d.interp$partsize.class
+
 # extract vertex attributes for interpretation and linking to MU data
 d <- igraph::as_data_frame(g, what = 'vertices')
 names(d)[1] <- 'compname'
