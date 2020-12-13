@@ -641,15 +641,12 @@ Here we used the fast greedy modularity optimisation algorithm [@clauset2004find
 A range of network metrics can be derived from the topology of the graph. Below, we list some metrics that are of potential use for investigating/understanding soil networks. These can be split into local measures (specific to each node) and global measures (that apply to the whole network).
 
 - **Number of connected components:** Networks do not need to comprise of a single connected component.  The number of connected componts of a network is the number of distinct subgraphs that the network is comprised of. For example it is possible to have an isolated pair of soil series that are connected to each other, but to no other series in the network.
-
-- **Number of communities:** This is derived from the community detection results. Since communitiest can not span across disconnected subgraphs, the number of communities is bounded below by the number of connected componets.
-
+- **Number of communities:** This is derived from the community detection results. Since communities can not span across disconnected subgraphs, the number of communities is bounded below by the number of connected components.
  - **Node Centrality:** This measures, broadly, the ``importance'' of a node in the topology of the network. A number of different centrality measures exist. We consider the following:
-
-  - Node degree: this simply the number of links or edges connected to a node. It gives an indication of how "ubiquitous"/"social" a soil series -- ie high degree centrailyty, that's a soil series that co-coccur with many others.
-  - Node strength: for weighted networks, the strength of a node is the sum of the weights of the edges connected to that node. For unweiughted netowrks, node strenght is eual to degree centrality.
- - PageRank: A popular variant of eigenvector centrality. Eigenvector-based measures consider not only the strength of a node but also how well connected a node is to other nodes with high node strength. That is, if the soil series that a node is connected to is also highly connected. (Socialbale soils connected to ither sociabale soils.)
- - Betweeness centrality:  The number of weighted shortest paths that pass through a node, given all possible paths between pairs of nodes in the network. In the contxt of soil networks, series with high betweenness centrality are those that are found in common with mulitple communities of soil series. that is they share similarirty with soils from more than one communiyt of soils
+    - Node degree: this simply the number of links or edges connected to a node. It gives an indication of how "ubiquitous"/"social" a soil series -- ie high degree centrailyty, that's a soil series that co-coccur with many others.
+    - Node strength: for weighted networks, the strength of a node is the sum of the weights of the edges connected to that node. For unweiughted netowrks, node strenght is eual to degree centrality.
+    - PageRank: A popular variant of eigenvector centrality. Eigenvector-based measures consider not only the strength of a node but also how well connected a node is to other nodes with high node strength. That is, if the soil series that a node is connected to is also highly connected. (Socialbale soils connected to ither sociabale soils.)
+    - Betweeness centrality:  The number of weighted shortest paths that pass through a node, given all possible paths between pairs of nodes in the network. In the contxt of soil networks, series with high betweenness centrality are those that are found in common with mulitple communities of soil series. that is they share similarirty with soils from more than one communiyt of soils
  
  FOR DISCUSSION Suggest they can adapt to different soil forming factors combination? Reveal soil that have ubiquitous soil formation processes? 
 
@@ -782,24 +779,23 @@ p_g3 <- p_g2 +
 
 p_g4 <- p_g2 +
   scale_colour_manual(values = colour_scale_data$color_simple, labels = colour_scale_data$notes, guide = guide_legend(title = ""))
+
+p_g5 <- p_g2 +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_manual(values = colour_scale_data$color_simple, labels = colour_scale_data$notes, guide = guide_legend(title = ""))
 ```
 
 The existence of co-occuring soil series across the surveyed region allowed for the computation of a similarity matrix, as presented in the Methods section. 
-This similarity matrix was then used to build the adjacency graph of the soil survey, which is shown Figure \ref{fig:plot_graph_combined}. 
+This similarity matrix was then used to build the adjacency graph of the soil survey, which is shown Figure \ref{fig:plot_graph_annotated}. 
 The resulting visualisation shows a main network, surrounded by 8 other, much smaller networks. 
 This shows that... 
 
-```{r plot_graph_combined, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_combined}Graph representation of the soil series co-occurence. ", fig.width=12, fig.height=8}
-# cowplot::plot_grid(p_g1, p_g2, p_g3, nrow = 1, labels = "auto", align = "h", label_x = 0.5, label_y = 0)
-p_g1
-```
-
-Figure \ref{fig:plot_graph_annotated} shows the communities idemtified from the graph structure, and how these cluster the different soil series present in the soil survey area.  
+Figure \ref{fig:plot_graph_annotated} shows the communities identified from the graph structure, and how these cluster the different soil series present in the soil survey area.  
 Ultimately, 16 different communities were delineated by the algorithm. 
 
-```{r plot_graph_annotated, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_annotated}Correspondance between identified communities from the graph structure and soil series.", fig.width=12, fig.height=8}
+```{r plot_graph_annotated, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_annotated}Correspondance between identified communities from the graph structure and soil series.", fig.width=6, fig.height=8}
 # cowplot::plot_grid(p_g1, p_g2, p_g3, nrow = 1, labels = "auto", align = "h", label_x = 0.5, label_y = 0)
-p_g3
+p_g5 + theme(legend.position = "none")
 ```
 
 ## Graph metrics
@@ -838,8 +834,8 @@ dd <- plyr::ldply(
 
 ## Expert interpretation of the detected communities
 
-```{r plot_graph_4, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_4}Expert interpretation of the communities.", fig.width=10, fig.height=8}
-print(p_g4)
+```{r plot_graph_4, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:plot_graph_4}Expert interpretation of the communities.", fig.width=6, fig.height=8}
+p_g5 + theme(legend.position = "bottom")
 ```
 
 <!-- ```{r map_communities, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="\\label{fig:map_communities}Map of the communities identified on the graph.", fig.width=10, fig.height=8} -->
