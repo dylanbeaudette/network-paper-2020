@@ -28,6 +28,7 @@ mu.agg.membership <- function(i) {
     mukey = i$mukey[1],
     cluster = idx,
     membership = rs[idx],
+    maj.comp = i$compname[which.max(i$comppct_r)[1]], 
     H = H,
     stringsAsFactors = FALSE
   )
