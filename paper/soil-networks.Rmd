@@ -640,13 +640,13 @@ Here we used the fast greedy modularity optimisation algorithm [@clauset2004find
 
 A range of network metrics can be derived from the topology of the graph. Below, we list some metrics that are of potential use for investigating/understanding soil networks. These can be split into local measures (specific to each node) and global measures (that apply to the whole network).
 
-- **Number of connected components:** Networks do not need to comprise of a single connected component.  The number of connected componts of a network is the number of distinct subgraphs that the network is comprised of. For example it is possible to have an isolated pair of soil series that are connected to each other, but to no other series in the network.
+- **Number of connected components:** Networks do not need to comprise of a single connected component.  The number of connected components of a network is the number of distinct subgraphs that the network is comprised of. For example it is possible to have an isolated pair of soil series that are connected to each other, but to no other series in the network.
 - **Number of communities:** This is derived from the community detection results. Since communities can not span across disconnected subgraphs, the number of communities is bounded below by the number of connected components.
  - **Node Centrality:** This measures, broadly, the ``importance'' of a node in the topology of the network. A number of different centrality measures exist. We consider the following:
-    - Node degree: this simply the number of links or edges connected to a node. It gives an indication of how "ubiquitous"/"social" a soil series -- ie high degree centrailyty, that's a soil series that co-coccur with many others.
-    - Node strength: for weighted networks, the strength of a node is the sum of the weights of the edges connected to that node. For unweiughted netowrks, node strenght is eual to degree centrality.
-    - PageRank: A popular variant of eigenvector centrality. Eigenvector-based measures consider not only the strength of a node but also how well connected a node is to other nodes with high node strength. That is, if the soil series that a node is connected to is also highly connected. (Socialbale soils connected to ither sociabale soils.)
-    - Betweeness centrality:  The number of weighted shortest paths that pass through a node, given all possible paths between pairs of nodes in the network. In the contxt of soil networks, series with high betweenness centrality are those that are found in common with mulitple communities of soil series. that is they share similarirty with soils from more than one communiyt of soils
+    - Node degree: this simply the number of links or edges connected to a node. It gives an indication of how "ubiquitous"/"social" a soil series -- ie high degree centrality, that's a soil series that co-occur with many others.
+    - Node strength: for weighted networks, the strength of a node is the sum of the weights of the edges connected to that node. For unweighed netowrks, node strength is equal to degree centrality.
+    - PageRank: A popular variant of eigenvector centrality. Eigenvector-based measures consider not only the strength of a node but also how well connected a node is to other nodes with high node strength. That is, if the soil series that a node is connected to is also highly connected. (Socialbale soils connected to other sociable soils.)
+    - Betweeness centrality:  The number of weighted shortest paths that pass through a node, given all possible paths between pairs of nodes in the network. In the context of soil networks, series with high betweenness centrality are those that are found in common with multiple communities of soil series. that is they share similarity with soils from more than one community of soils
  
  FOR DISCUSSION Suggest they can adapt to different soil forming factors combination? Reveal soil that have ubiquitous soil formation processes? 
 
@@ -662,6 +662,16 @@ V(g)$strength <- strength(g)
 V(g)$pr <- page_rank(g)$vector
 # Betweeness
 V(g)$betweeness <- betweenness(g)
+
+# Bridge centrality
+# see https://rdrr.io/cran/networktools/man/bridge.html
+br <- networktools::bridge(g, communities = V(g)$cluster)
+
+V(g)$br_strength <- br$`Bridge Strength`
+V(g)$br_btw <- br$`Bridge Betweenness`
+V(g)$br_close <- br$`Bridge Closeness`
+V(g)$br_inf1 <- br$`Bridge Expected Influence (1-step)`
+V(g)$br_inf2 <- br$`Bridge Expected Influence (2-step)`
 ```
 
 ## Implementation
@@ -800,34 +810,93 @@ p_g5 + theme(legend.position = "none")
 
 ## Graph metrics
 
-```{r graph_metrics, echo=FALSE, message=FALSE, warning=FALSE}
+```{r plot_metrics, echo=FALSE, message=FALSE, warning=FALSE}
+# Node degree
+p_degree <- p_g1 +
+  geom_node_point(aes(size = size, color = degree), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "Node degree")
+  )
+
+# Node strength
+p_strength <- p_g1 +
+  geom_node_point(aes(size = size, color = strength), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "Node strength")
+  )
+
+# PageRank
+p_pr <- p_g1 +
+  geom_node_point(aes(size = size, color = pr), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "PageRank")
+  )
+
 # Betweeness
-btw <- igraph::betweenness(g)
-# Degree
-dg <- degree(g)
+p_betweeness <- p_g1 +
+  geom_node_point(aes(size = size, color = betweeness), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "Betweeness")
+  )
+
+p_degree + p_strength + p_pr + p_betweeness + plot_layout(ncol = 2)
 ```
 
-```{r page_rank, echo=FALSE, message=FALSE, warning=FALSE}
-nt <- V(g)$notes %>% unique
-names(nt) <- nt
+```{r plot_metrics_2, echo=FALSE, message=FALSE, warning=FALSE}
+# V(g)$br_strength <- br$`Bridge Strength`
+# V(g)$br_btw <- br$`Bridge Betweenness`
+# V(g)$br_close <- br$`Bridge Closeness`
+# V(g)$br_inf1 <- br$`Bridge Expected Influence (1-step)`
+# V(g)$br_inf2 <- br$`Bridge Expected Influence (2-step)`
+p_br_strength <- p_g1 +
+  geom_node_point(aes(size = size, color = betweeness), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "Bridge Strength")
+  )
 
-# I do this too sometimes
-dd <- plyr::ldply(
-  nt, 
-  function(i) {
-    res <- page.rank(igraph::induced_subgraph(g, which(V(g)$notes == i)))
-    d <- data.frame(series = names(res$vector), pr = res$vector)
-    d$series  <- with(d, reorder(series, pr)) 
-    d
-  }
-) 
+p_br_btw <- p_g1 +
+  geom_node_point(aes(size = size, color = br_btw), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "Bridge Betweenness")
+  )
 
-# p_pr <- ggplot(dd) + 
-#   geom_bar(aes(x = series, y = pr), stat = "identity") + 
-#   facet_wrap(~.id, scales = "free") + 
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p_br_close <- p_g1 +
+  geom_node_point(aes(size = size, color = br_close), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "Bridge Closeness")
+  )
 
+p_br_inf1 <- p_g1 +
+  geom_node_point(aes(size = size, color = br_inf1), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "Bridge Expected Influence (1-step)")
+  )
 
+p_br_inf2 <- p_g1 +
+  geom_node_point(aes(size = size, color = br_inf2), alpha = 0.9) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  scale_colour_viridis_c(
+    option = "magma",
+    guide = guide_legend(title = "Bridge Expected Influence (2-step)")
+  )
+
+p_br_btw + p_br_btw + p_br_close + p_br_inf1 + p_br_inf2 + plot_layout(ncol = 2)
 ```
 
 # Discussion
